@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "BC Smart Copier - Business Central Cell Copier",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Quickly copy cell and field values from Microsoft Dynamics 365 Business Central using Ctrl + Click (or Cmd + Click on Mac).",
   "permissions": [
     "storage",
@@ -15,8 +15,12 @@
       "matches": [
         "<all_urls>"
       ],
-      "js": ["content/content.js"],
-      "css": ["content/content.css"],
+      "js": [
+        "content/content.js"
+      ],
+      "css": [
+        "content/content.css"
+      ],
       "all_frames": true,
       "match_about_blank": true,
       "run_at": "document_idle"

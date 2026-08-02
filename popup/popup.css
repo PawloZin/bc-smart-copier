@@ -179,6 +179,35 @@ kbd {
   color: #4b5563;
 }
 
+.instruction-desc code {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 11px;
+  font-family: monospace;
+  color: #374151;
+  word-break: break-all;
+}
+
+/* Two-shortcut layout */
+.shortcut-row {
+  text-align: left;
+}
+
+.shortcut-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+.shortcut-divider {
+  border: none;
+  border-top: 1px solid #e5e7eb;
+  margin: 12px 0;
+}
+
 .footer {
   text-align: center;
   font-size: 10.5px;
