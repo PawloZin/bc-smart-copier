@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 448" width="100%" height="100%">
+  <defs>
+    <!-- Tło - Gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00a887"/>
+      <stop offset="45%" stop-color="#0092b3"/>
+      <stop offset="100%" stop-color="#0066d6"/>
+    </linearGradient>
+
+    <!-- Poświata podświetlonej komórki -->
+    <radialGradient id="cellGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="25%" stop-color="#ffffff" stop-opacity="0.8"/>
+      <stop offset="55%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Cień pod ikony dokumentów -->
+    <filter id="docShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#000000" flood-opacity="0.15"/>
+    </filter>
+  </defs>
+
+  <!-- Główna ikona (Wypełnia całe viewBox 448x448) -->
+  <rect x="0" y="0" width="448" height="448" rx="84" fill="url(#bgGradient)"/>
+
+  <!-- Efekt błysku / świecenia na komórce -->
+  <circle cx="202" cy="100" r="65" fill="url(#cellGlow)"/>
+
+  <!-- Siatka (Grid) -->
+  <g stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" opacity="0.95">
+    <!-- Obramowanie siatki -->
+    <rect x="48" y="78" width="352" height="132" fill="none" rx="2"/>
+    
+    <!-- Linie poziome -->
+    <line x1="48" y1="122" x2="400" y2="122"/>
+    <line x1="48" y1="166" x2="400" y2="166"/>
+
+    <!-- Linie pionowe -->
+    <line x1="92" y1="78" x2="92" y2="210"/>
+    <line x1="136" y1="78" x2="136" y2="210"/>
+    <line x1="180" y1="78" x2="180" y2="210"/>
+    <line x1="224" y1="78" x2="224" y2="210"/>
+    <line x1="268" y1="78" x2="268" y2="210"/>
+    <line x1="312" y1="78" x2="312" y2="210"/>
+    <line x1="356" y1="78" x2="356" y2="210"/>
+  </g>
+
+  <!-- Wypełniona, podświetlona komórka -->
+  <rect x="181.5" y="79.5" width="41" height="41" fill="#ffffff" rx="1"/>
+
+  <!-- Tylna ikona dokumentu -->
+  <g filter="url(#docShadow)">
+    <rect x="240" y="108" width="80" height="105" rx="10" fill="url(#bgGradient)" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Przednia ikona dokumentu -->
+  <g filter="url(#docShadow)">
+    <path d="M 270 136 H 324 L 348 160 V 240 C 348 243.3 345.3 246 342 246 H 270 C 266.7 246 264 243.3 264 240 V 142 C 264 138.7 266.7 136 270 136 Z" 
+          fill="url(#bgGradient)" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+    <path d="M 324 136 V 160 H 348" fill="none" stroke="#ffffff" stroke-width="7" stroke-linejoin="round"/>
+  </g>
+
+  <!-- Tekst BCSC -->
+  <text x="224" y="354" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-size="64" 
+        font-weight="800" 
+        fill="#ffffff" 
+        text-anchor="middle" 
+        letter-spacing="2">BCSC</text>
+
+  <!-- Tekst BC SMART COPIER -->
+  <text x="224" y="396" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif" 
+        font-size="20" 
+        font-weight="600" 
+        fill="#ffffff" 
+        text-anchor="middle" 
+        letter-spacing="3.5" 
+        opacity="0.95">BC SMART COPIER</text>
+</svg>

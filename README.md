@@ -1,6 +1,22 @@
-# BC Smart Copier - Extension for Microsoft Edge & Google Chrome
+<p align="center">
+  <img src="assets/icons/icon_large.svg" alt="BC Smart Copier Logo" width="160" height="160">
+</p>
 
-A lightweight extension designed for **Microsoft Dynamics 365 Business Central**. Supports two smart copy shortcuts:
+<h1 align="center">BC Smart Copier</h1>
+
+<p align="center">
+  A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b>.
+</p>
+
+---
+
+## 🎬 Demo
+
+![BC Smart Copier Demo](assets/docs/demo.gif)
+
+---
+
+## 🚀 Shortcuts & Actions
 
 | Shortcut | Action | Example output |
 |---|---|---|
@@ -9,7 +25,7 @@ A lightweight extension designed for **Microsoft Dynamics 365 Business Central**
 
 ---
 
-## 🚀 How it works
+## 💡 How it works
 
 ### Copy Cell Value — `Ctrl / Cmd ⌘` + Left Click
 1. Hold **CTRL** (or **CMD ⌘** on Mac).
@@ -65,6 +81,7 @@ Load directly from source files (Developer Mode):
 - `content/content.css` – Styles for cell highlight animation and Toast notifications.
 - `popup/` – Popup interface for quick enable/disable toggle.
 - `assets/icons/` – Extension icons set (SVG sources & PNG formats).
+- `assets/docs/` – Documentation assets and demo recordings.
 
 ---
 
