@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>BC Smart Copier</title>
   <link rel="stylesheet" href="popup.css">
 </head>
+
 <body>
   <div class="header">
     <div class="logo">
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version">v1.0.0</span>
+    <span class="version">v1.1.0</span>
   </div>
 
   <div class="card status-card">
@@ -28,12 +30,32 @@
 
   <div class="card instruction-card">
     <div class="instruction-title">How to use</div>
-    <div class="shortcut-box" id="shortcutBox">
-      <kbd>CTRL / CMD ⌘</kbd> + <kbd>Left Click</kbd>
+
+    <div class="shortcut-row">
+      <div class="shortcut-label">Copy cell value</div>
+      <div class="shortcut-box" id="shortcutBox">
+        <kbd>CTRL / ⌘</kbd> + <kbd>Click</kbd>
+      </div>
+      <p class="instruction-desc" id="shortcutDesc">
+        Left-click any cell or field to copy its plain text value.<br>
+        <em>Example: <code>10000</code> or <code>[No.]</code></em>
+      </p>
     </div>
-    <p class="instruction-desc" id="shortcutDesc">
-      Hold <strong>CTRL</strong> (or <strong>CMD ⌘</strong> on Mac) and left-click any cell or field in <strong>Business Central</strong> to automatically copy its value to the clipboard.
-    </p>
+
+    <div class="shortcut-divider"></div>
+
+    <div class="shortcut-row">
+      <div class="shortcut-label">Copy action path</div>
+      <div class="shortcut-box" id="shortcutBoxAction">
+        <kbd>CTRL / ⌘</kbd> + <kbd>Shift</kbd> + <kbd>Click</kbd>
+      </div>
+      <p class="instruction-desc" id="shortcutDescAction">
+        Click an action button to copy its full BC navigation path.<br>
+        <em>Direct: <code>open page [Sales Order] and go to [Home] tab and click {Post}</code></em><br>
+        <em>Submenu:
+          <code>open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}</code></em>
+      </p>
+    </div>
   </div>
 
   <div class="footer">
@@ -42,4 +64,5 @@
 
   <script src="popup.js"></script>
 </body>
+
 </html>
