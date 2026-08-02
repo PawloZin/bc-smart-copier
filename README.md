@@ -32,7 +32,7 @@ A lightweight extension designed for **Microsoft Dynamics 365 Business Central**
 ## ✨ Key Features
 
 - **Smart Text Sanitization**: Automatically converts non-breaking spaces (`\u00A0`), normalizes line breaks, and trims excess whitespace.
-- **Visual Feedback**: Green cell outline animation and subtle floating Toast notification (with error handling for empty cells).
+- **Stacked Toast Feedback**: Green cell outline animation and stacked floating Toast notifications (anchored bottom-center, top-inserted, 4-second duration, capped at 5 visible toasts).
 - **Toggle Control**: Easily enable or disable the extension anytime via the toolbar popup icon.
 - **100% Private & Local**: Runs entirely inside your browser with zero external network tracking or data collection.
 
