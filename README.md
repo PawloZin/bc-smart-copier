@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icons/icon_large.svg" alt="BC Smart Copier Logo" width="160" height="160">
+  <img src="./assets/icons/icon_large.svg" alt="BC Smart Copier Logo" width="160" height="160">
 </p>
 
 <h1 align="center">BC Smart Copier</h1>
@@ -12,7 +12,9 @@
 
 ## 🎬 Demo
 
-![BC Smart Copier Demo](assets/docs/demo.gif)
+<p align="center">
+  <img src="./assets/docs/demo.gif" alt="BC Smart Copier Demo" width="100%">
+</p>
 
 ---
 
