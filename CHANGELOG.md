@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-08-02
+
+### Added
+- **Stacked Toast Notifications**: Added support for bottom-center anchored stacked toast notifications with top-insertion, 4-second visibility duration, and a maximum cap of 5 concurrently visible toasts when rapidly copying values.
+
+---
+
 ## [1.1.0] - 2026-08-02
 
 ### Added

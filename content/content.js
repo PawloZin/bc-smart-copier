@@ -11,7 +11,8 @@
 (function () {
   'use strict';
 
-  let toastTimeout = null;
+  const MAX_TOASTS = 5;
+  const TOAST_DURATION = 4000; // 4 seconds visible duration
   let isEnabled = true;
 
   // Retrieve initial extension state from chrome.storage
@@ -480,55 +481,74 @@
   }
 
   /**
-   * Creates or updates notification Toast element.
+   * Creates and displays a stacked notification Toast element.
+   * Top-insertion prepends new toasts to the top of the container.
+   * Container is capped at 5 visible toasts; older toasts are removed immediately.
+   * Each toast auto-expires after 4 seconds.
+   *
    * @param {string} title — Toast header label
    * @param {string} value — Main content text
    * @param {boolean} isError — When true, applies error styling (red icon & border)
    */
   function showToast(title, value, isError) {
-    let toast = document.getElementById('bc-smart-copier-toast');
+    // Remove legacy single-toast element if present
+    const legacyToast = document.getElementById('bc-smart-copier-toast');
+    if (legacyToast) legacyToast.remove();
 
-    if (!toast) {
-      toast = document.createElement('div');
-      toast.id = 'bc-smart-copier-toast';
+    let container = document.getElementById('bc-smart-copier-toast-container');
 
-      // Build DOM programmatically — avoids innerHTML and XSS risk
-      const icon = document.createElement('div');
-      icon.className = 'bc-toast-icon';
-
-      const body = document.createElement('div');
-      body.className = 'bc-toast-body';
-
-      const titleEl = document.createElement('div');
-      titleEl.className = 'bc-toast-title';
-
-      const valueEl = document.createElement('div');
-      valueEl.className = 'bc-toast-value';
-
-      body.append(titleEl, valueEl);
-      toast.append(icon, body);
-      document.body.appendChild(toast);
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'bc-smart-copier-toast-container';
+      (document.body || document.documentElement).appendChild(container);
     }
 
-    const iconEl = toast.querySelector('.bc-toast-icon');
-    const titleEl = toast.querySelector('.bc-toast-title');
-    const valueEl = toast.querySelector('.bc-toast-value');
+    // Build toast item DOM programmatically (XSS-safe)
+    const toast = document.createElement('div');
+    toast.className = 'bc-toast-item' + (isError ? ' bc-toast-error' : '');
 
-    // Update icon and styling based on error state
-    if (iconEl) iconEl.textContent = isError ? '!' : '✓';
-    if (titleEl) titleEl.textContent = title;
-    if (valueEl) valueEl.textContent = value;
+    const icon = document.createElement('div');
+    icon.className = 'bc-toast-icon';
+    icon.textContent = isError ? '!' : '✓';
 
-    // Toggle error class for red styling
-    toast.classList.toggle('bc-toast-error', !!isError);
+    const body = document.createElement('div');
+    body.className = 'bc-toast-body';
+
+    const titleEl = document.createElement('div');
+    titleEl.className = 'bc-toast-title';
+    titleEl.textContent = title;
+
+    const valueEl = document.createElement('div');
+    valueEl.className = 'bc-toast-value';
+    valueEl.textContent = value;
+
+    body.append(titleEl, valueEl);
+    toast.append(icon, body);
+
+    // Prepend to container (top-insertion stacking)
+    container.prepend(toast);
+
+    // Cap at MAX_TOASTS (5): remove oldest at bottom
+    while (container.children.length > MAX_TOASTS) {
+      const oldest = container.lastElementChild;
+      if (oldest) {
+        if (oldest._removeTimer) clearTimeout(oldest._removeTimer);
+        oldest.remove();
+      }
+    }
+
+    // Force browser reflow to guarantee smooth CSS transition animation
+    void toast.offsetHeight;
     toast.classList.add('bc-toast-show');
 
-    if (toastTimeout) {
-      clearTimeout(toastTimeout);
-    }
-
-    toastTimeout = setTimeout(() => {
+    // Auto-expire after 4 seconds
+    toast._removeTimer = setTimeout(() => {
       toast.classList.remove('bc-toast-show');
-    }, 2200);
+      setTimeout(() => {
+        if (toast.parentNode) {
+          toast.remove();
+        }
+      }, 250); // wait for fade-out transition
+    }, TOAST_DURATION);
   }
 })();

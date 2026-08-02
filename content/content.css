@@ -9,12 +9,24 @@
   box-shadow: 0 0 8px rgba(11, 106, 59, 0.4) !important;
 }
 
-/* Toast notification container */
-#bc-smart-copier-toast {
+/* Toast notification container - anchored at bottom-center */
+#bc-smart-copier-toast-container {
   position: fixed;
   bottom: 32px;
   left: 50%;
+  transform: translateX(-50%);
   z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+  pointer-events: none;
+  width: calc(100vw - 32px);
+  max-width: 480px;
+}
+
+/* Individual Toast Item */
+.bc-toast-item {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -28,24 +40,25 @@
   font-weight: 500;
   border-left: 4px solid #107c41;
   opacity: 0;
-  transform: translateX(-50%) translateY(16px) scale(0.96);
+  transform: translateY(-12px) scale(0.96);
   transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1), transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   pointer-events: none;
-  max-width: 480px;
+  width: 100%;
+  box-sizing: border-box;
   word-break: break-word;
 }
 
-#bc-smart-copier-toast.bc-toast-show {
+.bc-toast-item.bc-toast-show {
   opacity: 1;
-  transform: translateX(-50%) translateY(0) scale(1);
+  transform: translateY(0) scale(1);
 }
 
 /* Error state — red icon and border */
-#bc-smart-copier-toast.bc-toast-error {
+.bc-toast-item.bc-toast-error {
   border-left-color: #c0392b;
 }
 
-#bc-smart-copier-toast .bc-toast-icon {
+.bc-toast-item .bc-toast-icon {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -59,17 +72,18 @@
   font-size: 12px;
 }
 
-#bc-smart-copier-toast.bc-toast-error .bc-toast-icon {
+.bc-toast-item.bc-toast-error .bc-toast-icon {
   background: #c0392b;
 }
 
-#bc-smart-copier-toast .bc-toast-body {
+.bc-toast-item .bc-toast-body {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
-#bc-smart-copier-toast .bc-toast-title {
+.bc-toast-item .bc-toast-title {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -77,7 +91,7 @@
   font-weight: 600;
 }
 
-#bc-smart-copier-toast .bc-toast-value {
+.bc-toast-item .bc-toast-value {
   color: #ffffff;
   font-size: 13px;
   font-weight: 600;
@@ -91,8 +105,8 @@
 
 /* Accessibility: respect user preference for reduced motion */
 @media (prefers-reduced-motion: reduce) {
-  #bc-smart-copier-toast {
+  .bc-toast-item {
     transition: opacity 0.1s linear;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: none;
   }
 }
