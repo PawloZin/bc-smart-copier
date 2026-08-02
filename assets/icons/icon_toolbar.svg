@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 380" width="100%" height="100%">
+  <defs>
+    <!-- Typography -->
+    <style>
+      .bcsc-text {
+        font-family: 'Arial Bold', 'Nunito', sans-serif;
+        font-weight: 800;
+        font-size: 108px;
+        fill: #ffffff;
+        letter-spacing: 1.5px;
+      }
+    </style>
+
+    <!-- Background gradient -->
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#02c39a" />
+      <stop offset="35%" stop-color="#00a3cc" />
+      <stop offset="70%" stop-color="#0072ce" />
+      <stop offset="100%" stop-color="#185cc9" />
+    </linearGradient>
+
+    <!-- Mask for document overlap -->
+    <mask id="frontDocMask">
+      <rect x="0" y="0" width="380" height="380" fill="white" />
+      <path d="M 182 82 L 244 82 L 276 114 L 276 226 A 10 10 0 0 1 266 236 L 182 236 A 10 10 0 0 1 172 226 L 172 92 A 10 10 0 0 1 182 82 Z" fill="black" />
+    </mask>
+  </defs>
+
+  <!-- App background -->
+  <rect x="0" y="0" width="380" height="380" rx="84" fill="url(#bgGradient)" />
+
+  <!-- Document icons -->
+  <g transform="translate(203, 142) scale(1.25) translate(-203, -142)" 
+     stroke="#ffffff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <!-- Back document -->
+    <rect x="130" y="48" width="110" height="146" rx="10" mask="url(#frontDocMask)" />
+
+    <!-- Front document -->
+    <path d="M 182 82 L 244 82 L 276 114 L 276 226 A 10 10 0 0 1 266 236 L 182 236 A 10 10 0 0 1 172 226 L 172 92 A 10 10 0 0 1 182 82 Z" />
+
+    <!-- Corner fold -->
+    <path d="M 244 82 L 244 114 L 276 114" />
+  </g>
+
+  <!-- Text label -->
+  <text x="190" y="358" text-anchor="middle" class="bcsc-text">BCSC</text>
+</svg>

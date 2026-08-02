@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BC Smart Copier</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="header">
+    <div class="logo">
+      <span class="bc-badge">BC</span>
+      <span class="title">Smart Copier</span>
+    </div>
+    <span class="version">v1.0.0</span>
+  </div>
+
+  <div class="card status-card">
+    <div class="status-info">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">Extension is active</span>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="toggleExtension" checked>
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="card instruction-card">
+    <div class="instruction-title">How to use</div>
+    <div class="shortcut-box" id="shortcutBox">
+      <kbd>CTRL / CMD ⌘</kbd> + <kbd>Left Click</kbd>
+    </div>
+    <p class="instruction-desc" id="shortcutDesc">
+      Hold <strong>CTRL</strong> (or <strong>CMD ⌘</strong> on Mac) and left-click any cell or field in <strong>Business Central</strong> to automatically copy its value to the clipboard.
+    </p>
+  </div>
+
+  <div class="footer">
+    <span>For Microsoft Dynamics 365 Business Central</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
