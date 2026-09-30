@@ -20,30 +20,38 @@
 
 ## 🚀 Shortcuts & Actions
 
-| Shortcut | Action | Example output |
+| Default shortcut | Action | Example output |
 |---|---|---|
-| `Ctrl / Cmd ⌘` + **Click** | Copy cell value | `10000` or `[No.]` |
-| `Ctrl / Cmd ⌘` + `Shift` + **Click** | Copy action path | `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}` |
+| `Alt` + **Click** | Copy cell value | `10000` or `[No.]` |
+| `Alt` + `Shift` + **Click** | Copy action path | `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}` |
+
+On Mac, `Alt` is the `Option ⌥` key.
+
+### ⌨️ Custom shortcuts
+
+Both shortcuts can be changed in the extension popup (**Keyboard shortcuts** section). Available options: `Alt`, `Shift`, `Ctrl / Cmd ⌘` and the combinations `Alt + Shift`, `Ctrl + Shift`, `Ctrl + Alt`. The two shortcuts must be different.
+
+> **Warning**: `Ctrl / Cmd ⌘ + Click` is used by Business Central to select multiple rows. While a shortcut using `Ctrl / Cmd ⌘` is active, that multi-row selection will not work.
 
 ---
 
 ## 💡 How it works
 
-### Copy Cell Value — `Ctrl / Cmd ⌘` + Left Click
-1. Hold **CTRL** (or **CMD ⌘** on Mac).
+### Copy Cell Value — `Alt` + Left Click
+1. Hold **ALT** (or **OPTION ⌥** on Mac).
 2. Left-click any cell, field, or column header in Business Central.
-3. The clean text value is automatically sanitized and copied to your clipboard.
+3. The clean text value is automatically sanitized and copied to your clipboard (Boolean fields are copied as `Yes` / `No`).
 4. The cell briefly highlights in green, and a Toast notification displays the copied value.
 
-### Copy Action Path — `Ctrl / Cmd ⌘` + `Shift` + Left Click
-1. Hold **CTRL + SHIFT** (or **CMD ⌘ + SHIFT** on Mac).
+### Copy Action Path — `Alt` + `Shift` + Left Click
+1. Hold **ALT + SHIFT** (or **OPTION ⌥ + SHIFT** on Mac).
 2. Left-click any action button in the BC toolbar or action bar.
 3. The extension extracts the **Page Name**, **Active Tab**, **Submenu hierarchy**, and **Action Button label** and copies a structured path to your clipboard.
 4. Examples:
    - **Direct action**: `open page [Sales Order] and go to [Home] tab and click {Post}`
    - **Nested submenu**: `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}`
 
-> **Note**: Both shortcuts call `e.preventDefault()` and `e.stopPropagation()` to prevent unintended BC actions — such as link navigation, entering edit mode, or opening report request pages.
+> **Note**: Both shortcuts block the whole click gesture (`preventDefault()` / `stopPropagation()`) to prevent unintended BC or browser actions — such as link navigation, entering edit mode, opening report request pages, or the browser's Alt + Click link download.
 
 ---
 
@@ -51,7 +59,7 @@
 
 - **Smart Text Sanitization**: Automatically converts non-breaking spaces (`\u00A0`), normalizes line breaks, and trims excess whitespace.
 - **Stacked Toast Feedback**: Green cell outline animation and stacked floating Toast notifications (anchored bottom-center, top-inserted, 4-second duration, capped at 5 visible toasts).
-- **Toggle Control**: Easily enable or disable the extension anytime via the toolbar popup icon.
+- **Toggle Control & Custom Shortcuts**: Enable or disable the extension and choose your own shortcuts via the toolbar popup.
 - **100% Private & Local**: Runs entirely inside your browser with zero external network tracking or data collection.
 
 ---
@@ -79,9 +87,9 @@ Load directly from source files (Developer Mode):
 ## 📂 Project Structure
 
 - `manifest.json` – Extension configuration (Manifest V3).
-- `content/content.js` – Two shortcuts: `Ctrl/Cmd + Click` copies cell value; `Ctrl/Cmd + Shift + Click` copies the full action path including submenus (Page › Tab › Submenu › Action).
+- `content/content.js` – Two configurable shortcuts: copy cell value (default `Alt + Click`) and copy the full action path including submenus (default `Alt + Shift + Click`, Page › Tab › Submenu › Action).
 - `content/content.css` – Styles for cell highlight animation and Toast notifications.
-- `popup/` – Popup interface for quick enable/disable toggle.
+- `popup/` – Popup interface: enable/disable toggle and shortcut configuration.
 - `assets/icons/` – Extension icons set (SVG sources & PNG formats).
 - `assets/docs/` – Documentation assets and demo recordings.
 

@@ -14,7 +14,7 @@
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version">v1.2.0</span>
+    <span class="version" id="version">v1.3.0</span>
   </div>
 
   <div class="card status-card">
@@ -33,10 +33,8 @@
 
     <div class="shortcut-row">
       <div class="shortcut-label">Copy cell value</div>
-      <div class="shortcut-box" id="shortcutBox">
-        <kbd>CTRL / ⌘</kbd> + <kbd>Click</kbd>
-      </div>
-      <p class="instruction-desc" id="shortcutDesc">
+      <div class="shortcut-box" id="shortcutBoxCell"></div>
+      <p class="instruction-desc">
         Left-click any cell or field to copy its plain text value.<br>
         <em>Example: <code>10000</code> or <code>[No.]</code></em>
       </p>
@@ -46,16 +44,35 @@
 
     <div class="shortcut-row">
       <div class="shortcut-label">Copy action path</div>
-      <div class="shortcut-box" id="shortcutBoxAction">
-        <kbd>CTRL / ⌘</kbd> + <kbd>Shift</kbd> + <kbd>Click</kbd>
-      </div>
-      <p class="instruction-desc" id="shortcutDescAction">
+      <div class="shortcut-box" id="shortcutBoxAction"></div>
+      <p class="instruction-desc">
         Click an action button to copy its full BC navigation path.<br>
         <em>Direct: <code>open page [Sales Order] and go to [Home] tab and click {Post}</code></em><br>
         <em>Submenu:
           <code>open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}</code></em>
       </p>
     </div>
+  </div>
+
+  <div class="card settings-card">
+    <div class="instruction-title">Keyboard shortcuts</div>
+
+    <label class="setting-row" for="shortcutCell">
+      <span class="setting-label">Copy cell value</span>
+      <select id="shortcutCell"></select>
+    </label>
+
+    <label class="setting-row" for="shortcutAction">
+      <span class="setting-label">Copy action path</span>
+      <select id="shortcutAction"></select>
+    </label>
+
+    <p class="setting-message setting-warning" id="ctrlWarning" hidden></p>
+    <p class="setting-message setting-error" id="conflictError" hidden>
+      Both actions cannot use the same shortcut.
+    </p>
+
+    <button type="button" class="reset-button" id="resetShortcuts">Restore defaults</button>
   </div>
 
   <div class="footer">

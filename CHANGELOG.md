@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-09-30
+
+### Added
+- **Configurable Shortcuts**: Both copy shortcuts can now be set in the popup to `Alt`, `Shift`, `Ctrl / Cmd ⌘` or a two-key combination, with a *Restore defaults* option. A warning is shown when `Ctrl / Cmd ⌘` is selected, because it collides with multi-row selection in Business Central.
+
+### Changed
+- **New Default Shortcuts**: Copy cell value is now `Alt + Click` (was `Ctrl / Cmd ⌘ + Click`), copy action path is now `Alt + Shift + Click` (was `Ctrl / Cmd ⌘ + Shift + Click`).
+- Popup version label is read from the manifest.
+- Removed the redundant `host_permissions` entry — content script matches already grant the required access.
+
+### Fixed
+- **Page Name on Stacked Pages**: The action path used the caption of a page lying underneath the current one (e.g. `Items` instead of `Item Card`). The lookup is now scoped to the page that owns the click, or the top-most page for popup menus.
+- **Boolean Fields**: Copying a Boolean cell returned `on`; it now returns `Yes` / `No`.
+- **Click Leaking to BC**: Releasing the modifier key before the mouse button let the click reach Business Central (opening records or report pages). The whole gesture, including `dblclick` and `contextmenu`, is now suppressed.
+- **Focus Loss**: The clipboard fallback now restores focus to the previously focused BC field.
+- **Highlight Flicker**: Repeated copies of the same cell no longer cut the highlight short.
+
+### Removed
+- Unused legacy single-toast cleanup, an unreachable page-title selector and dead popup code.
+
+---
+
 ## [1.2.0] - 2026-08-02
 
 ### Added
