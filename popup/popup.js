@@ -1,6 +1,6 @@
 // Must stay in sync with VALID_SHORTCUTS / DEFAULT_SHORTCUTS in content/content.js
-const SHORTCUT_OPTIONS = ['alt', 'shift', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
-const DEFAULT_SHORTCUTS = { cell: 'alt', action: 'alt+shift' };
+const SHORTCUT_OPTIONS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
+const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift' };
 
 document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.getElementById('toggleExtension');
@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
   );
 
   const KEY_LABELS = isMac
-    ? { ctrl: 'CMD ⌘ / CTRL', alt: 'OPTION ⌥', shift: 'SHIFT' }
+    ? { ctrl: '⌘ CMD', alt: '⌥ OPTION', shift: '⇧ SHIFT' }
     : { ctrl: 'CTRL', alt: 'ALT', shift: 'SHIFT' };
 
   const hasStorage = typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local;
@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const usesCtrl = [shortcuts.cell, shortcuts.action].some((value) => value.split('+').includes('ctrl'));
     ctrlWarning.hidden = !usesCtrl;
-    ctrlWarning.textContent = `${isMac ? 'CMD ⌘' : 'CTRL'} + Click collides with multi-row selection in ` +
+    ctrlWarning.textContent = `${isMac ? '⌘ CMD' : 'CTRL'} + Click collides with multi-row selection in ` +
       'Business Central — while this shortcut is active, you cannot select several rows with it.';
   }
 

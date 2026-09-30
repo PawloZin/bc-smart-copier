@@ -4,7 +4,7 @@
  * and copies clean text content to clipboard.
  *
  * Default shortcuts (configurable in the popup):
- *   Alt + Left Click          → Copy cell value
+ *   Shift + Left Click        → Copy cell value
  *   Alt + Shift + Left Click  → Copy action path (Page › Tab › Action)
  *
  * The "ctrl" modifier matches both Ctrl and Cmd ⌘ (Mac).
@@ -18,8 +18,8 @@
   const SUPPRESS_WINDOW = 1000; // max time to swallow the rest of a copy gesture
 
   // Must stay in sync with SHORTCUT_OPTIONS / DEFAULT_SHORTCUTS in popup/popup.js
-  const VALID_SHORTCUTS = ['alt', 'shift', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
-  const DEFAULT_SHORTCUTS = { cell: 'alt', action: 'alt+shift' };
+  const VALID_SHORTCUTS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
+  const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift' };
 
   let isEnabled = true;
   let shortcuts = { ...DEFAULT_SHORTCUTS };
@@ -101,7 +101,7 @@
 
   /**
    * Returns which shortcut mode is active, or null if no shortcut applies.
-   * 'cell'   → cell value shortcut (default Alt + Left Click)
+   * 'cell'   → cell value shortcut (default Shift + Left Click)
    * 'action' → action path shortcut (default Alt + Shift + Left Click)
    */
   function getShortcutMode(e) {
@@ -138,7 +138,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // CELL VALUE COPY  (default Alt + Click)
+  // CELL VALUE COPY  (default Shift + Click)
   // ---------------------------------------------------------------------------
 
   function processCellCopy(e) {

@@ -10,10 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [1.3.0] - 2026-09-30
 
 ### Added
-- **Configurable Shortcuts**: Both copy shortcuts can now be set in the popup to `Alt`, `Shift`, `Ctrl / Cmd ⌘` or a two-key combination, with a *Restore defaults* option. A warning is shown when `Ctrl / Cmd ⌘` is selected, because it collides with multi-row selection in Business Central.
+- **Configurable Shortcuts**: Both copy shortcuts can now be set in the popup to `Shift`, `Alt`, `Ctrl / Cmd ⌘` or a two-key combination, with a *Restore defaults* option. On macOS the popup shows native key symbols (`⇧`, `⌥`, `⌘`). A warning is shown when `Ctrl / Cmd ⌘` is selected, because it collides with multi-row selection in Business Central.
 
 ### Changed
-- **New Default Shortcuts**: Copy cell value is now `Alt + Click` (was `Ctrl / Cmd ⌘ + Click`), copy action path is now `Alt + Shift + Click` (was `Ctrl / Cmd ⌘ + Shift + Click`).
+- **New Default Shortcuts**: Copy cell value is now `Shift + Click` (was `Ctrl / Cmd ⌘ + Click`), copy action path is now `Alt + Shift + Click` (was `Ctrl / Cmd ⌘ + Shift + Click`).
 - Popup version label is read from the manifest.
 - Removed the redundant `host_permissions` entry — content script matches already grant the required access.
 
