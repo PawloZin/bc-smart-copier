@@ -1,11 +1,13 @@
 /**
  * BC Smart Copier - Content Script
- * Captures Ctrl / Cmd + Left Click on cells in Microsoft Dynamics 365 Business Central
+ * Captures modifier + Left Click on cells in Microsoft Dynamics 365 Business Central
  * and copies clean text content to clipboard.
  *
- * Shortcuts:
- *   Ctrl / Cmd + Left Click          → Copy cell value
- *   Ctrl / Cmd + Shift + Left Click  → Copy action path (Page › Tab › Action)
+ * Default shortcuts (configurable in the popup):
+ *   Alt + Left Click          → Copy cell value
+ *   Alt + Shift + Left Click  → Copy action path (Page › Tab › Action)
+ *
+ * The "ctrl" modifier matches both Ctrl and Cmd ⌘ (Mac).
  */
 
 (function () {
@@ -13,22 +15,45 @@
 
   const MAX_TOASTS = 5;
   const TOAST_DURATION = 4000; // 4 seconds visible duration
+  const SUPPRESS_WINDOW = 1000; // max time to swallow the rest of a copy gesture
+
+  // Must stay in sync with SHORTCUT_OPTIONS / DEFAULT_SHORTCUTS in popup/popup.js
+  const VALID_SHORTCUTS = ['alt', 'shift', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
+  const DEFAULT_SHORTCUTS = { cell: 'alt', action: 'alt+shift' };
+
   let isEnabled = true;
+  let shortcuts = { ...DEFAULT_SHORTCUTS };
 
   // Retrieve initial extension state from chrome.storage
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get({ enabled: true }, (res) => {
+    chrome.storage.local.get({ enabled: true, shortcuts: DEFAULT_SHORTCUTS }, (res) => {
       isEnabled = res.enabled !== false;
+      shortcuts = normalizeShortcuts(res.shortcuts);
     });
 
     chrome.storage.onChanged.addListener((changes, areaName) => {
-      if (areaName === 'local' && changes.enabled !== undefined) {
+      if (areaName !== 'local') return;
+      if (changes.enabled !== undefined) {
         isEnabled = changes.enabled.newValue !== false;
+      }
+      if (changes.shortcuts !== undefined) {
+        shortcuts = normalizeShortcuts(changes.shortcuts.newValue);
       }
     });
   }
 
+  /**
+   * Falls back to defaults for missing, unknown or conflicting shortcut values.
+   */
+  function normalizeShortcuts(value) {
+    const cell = value && VALID_SHORTCUTS.includes(value.cell) ? value.cell : DEFAULT_SHORTCUTS.cell;
+    const action = value && VALID_SHORTCUTS.includes(value.action) ? value.action : DEFAULT_SHORTCUTS.action;
+    if (cell === action) return { ...DEFAULT_SHORTCUTS };
+    return { cell, action };
+  }
+
   let lastCopyTime = 0;
+  let suppressUntil = 0;
 
   // --- Event Interception Strategy ---
   // BC's SPA framework listens on multiple event types to handle navigation:
@@ -39,54 +64,66 @@
   //   pointerdown → mousedown → pointerup → mouseup → click
   //
   // Strategy:
-  //   1. Intercept pointerdown — perform copy, record timestamp.
-  //   2. Suppress mousedown, mouseup, click in capture phase for 500ms after
-  //      a copy — this prevents BC from handling any of them.
+  //   1. Intercept pointerdown — perform copy, open a suppression window.
+  //   2. Suppress the rest of that gesture (mousedown, pointerup, mouseup,
+  //      click, dblclick, contextmenu) in capture phase until the next plain
+  //      pointerdown or SUPPRESS_WINDOW elapses. Modifier keys are NOT checked
+  //      here, so releasing the key before the mouse button is still safe.
   window.addEventListener('pointerdown', handleShortcutEvent, true);
-  window.addEventListener('mousedown',   suppressBcEventAfterCopy, true);
-  window.addEventListener('mouseup',     suppressBcEventAfterCopy, true);
-  window.addEventListener('click',       suppressBcEventAfterCopy, true);
+  for (const type of ['mousedown', 'pointerup', 'mouseup', 'click', 'dblclick', 'contextmenu']) {
+    window.addEventListener(type, suppressBcEventAfterCopy, true);
+  }
 
   /**
-   * Blocks mousedown / mouseup / click events that arrive after a copy
-   * gesture. Without this, Business Central still processes those events
-   * (e.g. opens a report request page or navigates to a linked record)
+   * Blocks the remaining mouse events of a copy gesture. Without this,
+   * Business Central (or the browser — e.g. Alt+Click downloads a link,
+   * Shift+Click opens it in a new window) still processes those events
    * even though we already intercepted pointerdown.
    */
   function suppressBcEventAfterCopy(e) {
-    if (!isEnabled) return;
-    if (e.button !== 0) return;
-    if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
+    if (Date.now() >= suppressUntil) return;
 
-    // Block the event if a copy was performed within the last 500ms
-    if (Date.now() - lastCopyTime < 500) {
-      e.preventDefault();
-      e.stopPropagation();
-      e.stopImmediatePropagation();
-    }
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }
+
+  /**
+   * Checks whether the event's modifier keys exactly match a shortcut
+   * definition such as 'alt' or 'ctrl+shift'.
+   */
+  function matchesShortcut(e, shortcut) {
+    const keys = shortcut.split('+');
+    return (e.ctrlKey || e.metaKey) === keys.includes('ctrl') &&
+           e.altKey === keys.includes('alt') &&
+           e.shiftKey === keys.includes('shift');
   }
 
   /**
    * Returns which shortcut mode is active, or null if no shortcut applies.
-   * 'cell'   → Ctrl/Cmd + Left Click (no Shift)
-   * 'action' → Ctrl/Cmd + Shift + Left Click
+   * 'cell'   → cell value shortcut (default Alt + Left Click)
+   * 'action' → action path shortcut (default Alt + Shift + Left Click)
    */
   function getShortcutMode(e) {
     if (e.button !== 0) return null;
-    if (!(e.ctrlKey || e.metaKey)) return null;
-    if (e.altKey) return null;
-
-    return e.shiftKey ? 'action' : 'cell';
+    if (matchesShortcut(e, shortcuts.cell)) return 'cell';
+    if (matchesShortcut(e, shortcuts.action)) return 'action';
+    return null;
   }
 
   function handleShortcutEvent(e) {
-    const mode = getShortcutMode(e);
-    if (!mode || !isEnabled) return;
+    const mode = isEnabled ? getShortcutMode(e) : null;
+    if (!mode) {
+      // A plain click starts a new gesture — stop swallowing events
+      suppressUntil = 0;
+      return;
+    }
 
     // Synchronously block default BC / browser action
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
+    suppressUntil = Date.now() + SUPPRESS_WINDOW;
 
     // Debounce: ignore repeated triggers within 250ms
     const now = Date.now();
@@ -101,7 +138,7 @@
   }
 
   // ---------------------------------------------------------------------------
-  // CELL VALUE COPY  (Ctrl / Cmd + Click)
+  // CELL VALUE COPY  (default Alt + Click)
   // ---------------------------------------------------------------------------
 
   function processCellCopy(e) {
@@ -158,16 +195,20 @@
    * Extracts clean text value from cell or input field
    */
   function extractCleanValue(target, cellElement) {
+    const formControlSelector = 'input:not([type="hidden"]), textarea, select';
     let text = '';
 
-    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
-      text = target.value;
+    if (target.matches(formControlSelector)) {
+      text = readFormControlValue(target);
     } else {
-      const inputChild = cellElement.querySelector('input, textarea, select');
-      if (inputChild && inputChild.value) {
-        text = inputChild.value;
+      const inputChild = cellElement.querySelector(formControlSelector);
+      const inputValue = inputChild ? readFormControlValue(inputChild) : '';
+      if (inputValue) {
+        text = inputValue;
       } else {
-        const readControl = target.closest('.stringcontrol-read, .ms-list-itemLink, a, span') || target;
+        let readControl = target.closest('.stringcontrol-read, .ms-list-itemLink, a, span') || target;
+        // Never read text from outside the resolved cell
+        if (!cellElement.contains(readControl)) readControl = cellElement;
         text = readControl.innerText || cellElement.innerText || readControl.textContent || cellElement.textContent || '';
       }
     }
@@ -175,8 +216,23 @@
     return sanitizeText(text);
   }
 
+  /**
+   * Reads the user-visible value of a form control.
+   * Checkboxes (BC Boolean fields) return "Yes" / "No" instead of the
+   * meaningless "on" value. Other controls (including selects in edit mode)
+   * return their raw value.
+   */
+  function readFormControlValue(el) {
+    if (el.type === 'checkbox' || el.type === 'radio') {
+      const ariaHost = el.closest('[role="checkbox"][aria-checked]');
+      const checked = ariaHost ? ariaHost.getAttribute('aria-checked') === 'true' : el.checked;
+      return checked ? 'Yes' : 'No';
+    }
+    return el.value || '';
+  }
+
   // ---------------------------------------------------------------------------
-  // ACTION PATH COPY  (Ctrl / Cmd + Shift + Click)
+  // ACTION PATH COPY  (default Alt + Shift + Click)
   // ---------------------------------------------------------------------------
 
   function processActionCopy(e) {
@@ -253,15 +309,21 @@
   /**
    * Extracts the current BC page name.
    *
+   * BC keeps previously opened pages in the DOM (stacked .spa-view elements),
+   * so every lookup is scoped to the page the click belongs to — or to the
+   * top-most shown page when the click happened in a detached popup menu.
+   *
    * Tries in order:
    * 1. Visible page header title (.synopsis-trigger / caption) — gives exact display caption (e.g., "Sales Orders", "Customer Card")
    * 2. Active form attributes: aria-label (for List pages) or controlname (for Card pages)
    * 3. Role=heading or h1 fallbacks
    */
   function extractPageName(target) {
+    const scope = findPageScope(target);
+
     // 1. Visible page header title (most accurate display caption for both Card & List pages)
-    const titleEl = document.querySelector(
-      '.synopsis-trigger .content--RL_ctU0B98IcxQ8B, .synopsis-trigger, [id$="_subtitle"] span, .menu-bar__page-title [role="heading"]'
+    const titleEl = scope.querySelector(
+      '.synopsis-trigger, [id$="_subtitle"] span, .menu-bar__page-title [role="heading"]'
     );
     if (titleEl) {
       let text = sanitizeText(titleEl.innerText || titleEl.textContent || '');
@@ -271,8 +333,7 @@
 
     // 2. Form element attributes
     const form = target.closest('form[controlname]') ||
-                 document.querySelector('.spa-view.shown form[controlname], .spa-view.shown > form[controlname]') ||
-                 document.querySelector('form[controlname]');
+                 scope.querySelector('form[controlname]');
     if (form) {
       const pageType = form.getAttribute('data-page-type');
       const ariaLabel = sanitizeText(form.getAttribute('aria-label') || '');
@@ -291,7 +352,7 @@
     // 3. Fallback: role=heading elements
     const headingSelectors = ['[role="heading"][aria-level="1"]', 'h1'];
     for (const sel of headingSelectors) {
-      const el = document.querySelector(sel);
+      const el = scope.querySelector(sel);
       if (el) {
         let text = sanitizeText(el.innerText || el.textContent || '');
         text = text.replace(/:\s*$/, '').trim();
@@ -300,6 +361,21 @@
     }
 
     return '';
+  }
+
+  /**
+   * Returns the BC page view (.spa-view) that owns the clicked element.
+   * Popup menus are rendered in a portal outside the view, so for them the
+   * top-most shown view is used (BC marks every lower view "spa-not-top-most").
+   */
+  function findPageScope(target) {
+    const ownView = target.closest('.spa-view');
+    if (ownView) return ownView;
+
+    const shownViews = document.querySelectorAll('.spa-view.shown:not(.spa-not-top-most)');
+    if (shownViews.length > 0) return shownViews[shownViews.length - 1];
+
+    return document;
   }
 
   /**
@@ -451,16 +527,22 @@
     // Fallback for older contexts or restricted iframes
     try {
       if (!document.body) return false;
+      const previousFocus = document.activeElement;
       const textArea = document.createElement('textarea');
       textArea.value = text;
+      textArea.setAttribute('readonly', '');
       textArea.style.position = 'fixed';
       textArea.style.left = '-9999px';
       textArea.style.top = '-9999px';
       document.body.appendChild(textArea);
-      textArea.focus();
+      textArea.focus({ preventScroll: true });
       textArea.select();
       const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
+      // Give focus back so BC does not lose its current field / row
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        previousFocus.focus({ preventScroll: true });
+      }
       return successful;
     } catch (err) {
       console.error('BC Smart Copier: Fallback copy failed', err);
@@ -474,9 +556,12 @@
   function highlightElement(el) {
     if (!el || !el.classList) return;
 
+    // Restart the timer on repeated copies so an older timeout cannot cut it short
+    if (el._bcHighlightTimer) clearTimeout(el._bcHighlightTimer);
     el.classList.add('bc-smart-copier-cell-highlight');
-    setTimeout(() => {
+    el._bcHighlightTimer = setTimeout(() => {
       el.classList.remove('bc-smart-copier-cell-highlight');
+      el._bcHighlightTimer = null;
     }, 800);
   }
 
@@ -491,10 +576,6 @@
    * @param {boolean} isError — When true, applies error styling (red icon & border)
    */
   function showToast(title, value, isError) {
-    // Remove legacy single-toast element if present
-    const legacyToast = document.getElementById('bc-smart-copier-toast');
-    if (legacyToast) legacyToast.remove();
-
     let container = document.getElementById('bc-smart-copier-toast-container');
 
     if (!container) {
