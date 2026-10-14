@@ -7,12 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-10-14
+
+### Added
+- **Table Copier**: Hold the Table Copier shortcut (default `Alt`, `⌥ Option` on Mac) and point at any HTML table to outline it in green; click to copy all visible rows as TSV (TAB between columns, CRLF between rows) that pastes into Excel as rows and columns. `colspan` / `rowspan` keep columns aligned, cell text is normalized (line breaks, tabs and non-breaking spaces become spaces). The shortcut is configurable alongside the others and takes part in the same conflict check.
+
+---
+
 ## [1.3.0] - 2026-09-30
 
 ### Added
 - **Configurable Shortcuts**: Both copy shortcuts can now be set in the popup to `Shift`, `Alt`, `Ctrl / Cmd ⌘` or a two-key combination, with a *Restore defaults* option. On macOS the popup shows native key symbols (`⇧`, `⌥`, `⌘`). A warning is shown when `Ctrl / Cmd ⌘` is selected, because it collides with multi-row selection in Business Central.
-
-- **Table Copier**: Hold the Table Copier shortcut (default `Alt`, `⌥ Option` on Mac) and point at any HTML table to outline it in green; click to copy all visible rows as TSV (TAB between columns, CRLF between rows) that pastes into Excel as rows and columns. `colspan` / `rowspan` keep columns aligned, cell text is normalized (line breaks, tabs and non-breaking spaces become spaces). The shortcut is configurable alongside the others and takes part in the same conflict check.
 
 ### Changed
 - **New Default Shortcuts**: Copy cell value is now `Shift + Click` (was `Ctrl / Cmd ⌘ + Click`), copy action path is now `Alt + Shift + Click` (was `Ctrl / Cmd ⌘ + Shift + Click`).
