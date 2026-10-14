@@ -6,6 +6,7 @@
  * Default shortcuts (configurable in the popup):
  *   Shift + Left Click        → Copy cell value
  *   Alt + Shift + Left Click  → Copy action path (Page › Tab › Action)
+ *   Alt (hold) + Left Click   → Copy whole table as TSV (Table Copier)
  *
  * The "ctrl" modifier matches both Ctrl and Cmd ⌘ (Mac).
  */
@@ -19,7 +20,8 @@
 
   // Must stay in sync with SHORTCUT_OPTIONS / DEFAULT_SHORTCUTS in popup/popup.js
   const VALID_SHORTCUTS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
-  const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift' };
+  const SHORTCUT_ACTIONS = ['cell', 'action', 'table'];
+  const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift', table: 'alt' };
 
   let isEnabled = true;
   let shortcuts = { ...DEFAULT_SHORTCUTS };
@@ -39,17 +41,25 @@
       if (changes.shortcuts !== undefined) {
         shortcuts = normalizeShortcuts(changes.shortcuts.newValue);
       }
+      hideTableOverlay();
     });
   }
 
   /**
-   * Falls back to defaults for missing, unknown or conflicting shortcut values.
+   * Resolves the stored shortcut map so every action gets a valid, unique
+   * shortcut: the stored value, else the default, else the first free option.
+   * Older configurations without a "table" entry are upgraded this way too.
    */
   function normalizeShortcuts(value) {
-    const cell = value && VALID_SHORTCUTS.includes(value.cell) ? value.cell : DEFAULT_SHORTCUTS.cell;
-    const action = value && VALID_SHORTCUTS.includes(value.action) ? value.action : DEFAULT_SHORTCUTS.action;
-    if (cell === action) return { ...DEFAULT_SHORTCUTS };
-    return { cell, action };
+    const result = {};
+    const used = new Set();
+    for (const name of SHORTCUT_ACTIONS) {
+      const candidates = [value && value[name], DEFAULT_SHORTCUTS[name], ...VALID_SHORTCUTS];
+      const pick = candidates.find((c) => VALID_SHORTCUTS.includes(c) && !used.has(c));
+      result[name] = pick;
+      used.add(pick);
+    }
+    return result;
   }
 
   let lastCopyTime = 0;
@@ -103,11 +113,14 @@
    * Returns which shortcut mode is active, or null if no shortcut applies.
    * 'cell'   → cell value shortcut (default Shift + Left Click)
    * 'action' → action path shortcut (default Alt + Shift + Left Click)
+   * 'table'  → whole table shortcut (default Alt + Left Click) — only when
+   *            the pointer is over a <table>, otherwise the click is left alone
    */
   function getShortcutMode(e) {
     if (e.button !== 0) return null;
     if (matchesShortcut(e, shortcuts.cell)) return 'cell';
     if (matchesShortcut(e, shortcuts.action)) return 'action';
+    if (matchesShortcut(e, shortcuts.table) && findTable(e.target)) return 'table';
     return null;
   }
 
@@ -131,6 +144,8 @@
       lastCopyTime = now;
       if (mode === 'action') {
         processActionCopy(e);
+      } else if (mode === 'table') {
+        processTableCopy(e);
       } else {
         processCellCopy(e);
       }
@@ -491,6 +506,237 @@
     if (actionLabel) parts.push(`click {${actionLabel}}`);
 
     return parts.join(' and ');
+  }
+
+  // ---------------------------------------------------------------------------
+  // TABLE COPIER  (default hold Alt, hover a table, click)
+  // ---------------------------------------------------------------------------
+  // Generic: works on any HTML <table>, including tables added after page
+  // load, because the table is resolved from the event target on demand.
+  // Nothing is scanned up front and copied contents are never stored or logged.
+
+  let lastPointerTarget = null;
+  let overlayTable = null;      // table currently highlighted
+  let copiedTable = null;       // table just copied — not re-highlighted until the gesture ends
+  let overlayEl = null;
+  let overlayFrame = 0;
+
+  window.addEventListener('pointermove', onTablePointerMove, { capture: true, passive: true });
+  window.addEventListener('keydown', onTableModifierChange, { capture: true, passive: true });
+  window.addEventListener('keyup', onTableModifierChange, { capture: true, passive: true });
+  window.addEventListener('blur', resetTableMode);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) resetTableMode();
+  });
+  document.addEventListener('mouseout', (e) => {
+    // Pointer left the document (or this frame)
+    if (!e.relatedTarget) {
+      lastPointerTarget = null;
+      hideTableOverlay();
+    }
+  }, true);
+
+  function onTablePointerMove(e) {
+    lastPointerTarget = e.target;
+    updateTableHighlight(e);
+  }
+
+  function onTableModifierChange(e) {
+    updateTableHighlight(e);
+  }
+
+  function resetTableMode() {
+    lastPointerTarget = null;
+    copiedTable = null;
+    hideTableOverlay();
+  }
+
+  /**
+   * Shows the overlay over the table under the pointer while the configured
+   * Table Copier modifiers are held; hides it otherwise. `e` is any event
+   * that carries modifier flags (pointer or keyboard).
+   */
+  function updateTableHighlight(e) {
+    const active = isEnabled && matchesShortcut(e, shortcuts.table);
+    const table = active ? findTable(lastPointerTarget) : null;
+
+    if (!active) copiedTable = null;
+    if (table !== copiedTable) copiedTable = null;
+
+    if (!table || table === copiedTable) {
+      hideTableOverlay();
+      return;
+    }
+    if (table !== overlayTable) showTableOverlay(table);
+  }
+
+  function findTable(target) {
+    return target && target.closest ? target.closest('table') : null;
+  }
+
+  function showTableOverlay(table) {
+    if (!overlayEl) {
+      overlayEl = document.createElement('div');
+      overlayEl.id = 'bc-smart-copier-table-overlay';
+      overlayEl.setAttribute('aria-hidden', 'true');
+    }
+    if (!overlayEl.isConnected) document.documentElement.appendChild(overlayEl);
+
+    if (!overlayTable) {
+      window.addEventListener('scroll', scheduleOverlayUpdate, { capture: true, passive: true });
+      window.addEventListener('resize', scheduleOverlayUpdate, { passive: true });
+    }
+    overlayTable = table;
+    positionTableOverlay();
+  }
+
+  function hideTableOverlay() {
+    if (!overlayTable) return;
+    overlayTable = null;
+    window.removeEventListener('scroll', scheduleOverlayUpdate, { capture: true });
+    window.removeEventListener('resize', scheduleOverlayUpdate);
+    if (overlayFrame) cancelAnimationFrame(overlayFrame);
+    overlayFrame = 0;
+    if (overlayEl) overlayEl.remove();
+  }
+
+  function scheduleOverlayUpdate() {
+    if (overlayFrame) return;
+    overlayFrame = requestAnimationFrame(() => {
+      overlayFrame = 0;
+      positionTableOverlay();
+    });
+  }
+
+  /**
+   * Places the overlay over the visible part of the table: its bounding box
+   * clipped by scrolling ancestors and by the viewport.
+   */
+  function positionTableOverlay() {
+    if (!overlayTable || !overlayEl) return;
+    if (!overlayTable.isConnected) {
+      hideTableOverlay();
+      return;
+    }
+
+    const rect = overlayTable.getBoundingClientRect();
+    let left = rect.left;
+    let top = rect.top;
+    let right = rect.right;
+    let bottom = rect.bottom;
+
+    for (let el = overlayTable.parentElement; el && el !== document.documentElement; el = el.parentElement) {
+      const style = getComputedStyle(el);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const clip = el.getBoundingClientRect();
+      left = Math.max(left, clip.left);
+      top = Math.max(top, clip.top);
+      right = Math.min(right, clip.right);
+      bottom = Math.min(bottom, clip.bottom);
+    }
+
+    left = Math.max(left, 0);
+    top = Math.max(top, 0);
+    right = Math.min(right, document.documentElement.clientWidth || window.innerWidth);
+    bottom = Math.min(bottom, document.documentElement.clientHeight || window.innerHeight);
+
+    if (right <= left || bottom <= top) {
+      overlayEl.style.display = 'none';
+      return;
+    }
+    overlayEl.style.display = 'block';
+    overlayEl.style.left = left + 'px';
+    overlayEl.style.top = top + 'px';
+    overlayEl.style.width = (right - left) + 'px';
+    overlayEl.style.height = (bottom - top) + 'px';
+  }
+
+  function processTableCopy(e) {
+    const table = findTable(e.target);
+    if (!table) return;
+
+    const grid = readTableGrid(table);
+    hideTableOverlay();
+    copiedTable = table;
+
+    if (!grid.some((row) => row.some((value) => value !== ''))) {
+      showToast('Table is empty', 'No visible cells found to copy.', true);
+      return;
+    }
+
+    const tsv = grid.map((row) => row.map(toTsvField).join('\t')).join('\r\n');
+    const columns = Math.max(...grid.map((row) => row.length));
+
+    copyToClipboard(tsv).then((success) => {
+      if (success) {
+        showToast('Table copied', `${grid.length} ${grid.length === 1 ? 'row' : 'rows'} × ${columns} ${columns === 1 ? 'column' : 'columns'}`, false);
+      } else {
+        showToast('Copy error', 'Failed to access clipboard.', true);
+      }
+    });
+  }
+
+  /**
+   * Reads the visible rows and cells (th / td) of a table into a 2D array.
+   * colspan / rowspan cells occupy their whole area (text in the first slot,
+   * empty strings elsewhere) so columns stay aligned in a spreadsheet.
+   * Rows and cells that are not rendered (display: none) are skipped.
+   */
+  function readTableGrid(table) {
+    const grid = [];
+    const pending = []; // pending[col] = rows still covered by a rowspan above
+
+    for (const row of table.rows) {
+      if (row.getClientRects().length === 0) continue;
+
+      const values = [];
+      let col = 0;
+      const skipCovered = () => {
+        while (pending[col] > 0) {
+          values[col] = '';
+          pending[col]--;
+          col++;
+        }
+      };
+
+      for (const cell of row.cells) {
+        if (cell.getClientRects().length === 0) continue;
+        skipCovered();
+
+        const colSpan = Math.max(1, cell.colSpan || 1);
+        const rowSpan = Math.max(1, cell.rowSpan || 1);
+        for (let i = 0; i < colSpan; i++) {
+          values[col + i] = i === 0 ? normalizeTableCell(cell.innerText || cell.textContent || '') : '';
+          if (rowSpan > 1) pending[col + i] = rowSpan - 1;
+        }
+        col += colSpan;
+      }
+      skipCovered();
+
+      for (let i = 0; i < values.length; i++) if (values[i] === undefined) values[i] = '';
+      grid.push(values);
+    }
+
+    // Pad rows so every line has the same number of columns
+    const width = grid.reduce((max, row) => Math.max(max, row.length), 0);
+    for (const row of grid) while (row.length < width) row.push('');
+    return grid;
+  }
+
+  function normalizeTableCell(text) {
+    return text
+      .replace(/\u00A0/g, ' ')
+      .replace(/[\t\r\n]+/g, ' ')
+      .replace(/ {2,}/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Quotes a field containing double quotes so spreadsheet paste does not
+   * treat it as a quoted value and swallow the quote characters.
+   */
+  function toTsvField(value) {
+    return value.includes('"') ? '"' + value.replace(/"/g, '""') + '"' : value;
   }
 
   // ---------------------------------------------------------------------------

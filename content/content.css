@@ -110,3 +110,15 @@
     transform: none;
   }
 }
+
+/* Table Copier overlay — separate element, the table's own styles are never touched */
+#bc-smart-copier-table-overlay {
+  position: fixed;
+  z-index: 2147483646;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 2px solid #107c41;
+  border-radius: 2px;
+  background-color: rgba(16, 124, 65, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 0 10px rgba(11, 106, 59, 0.35);
+}

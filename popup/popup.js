@@ -1,16 +1,19 @@
-// Must stay in sync with VALID_SHORTCUTS / DEFAULT_SHORTCUTS in content/content.js
+// Must stay in sync with VALID_SHORTCUTS / SHORTCUT_ACTIONS / DEFAULT_SHORTCUTS in content/content.js
 const SHORTCUT_OPTIONS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
-const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift' };
+const SHORTCUT_ACTIONS = ['cell', 'action', 'table'];
+const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift', table: 'alt' };
 
 document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.getElementById('toggleExtension');
   const statusDot = document.getElementById('statusDot');
   const statusText = document.getElementById('statusText');
   const versionEl = document.getElementById('version');
-  const shortcutBoxCell = document.getElementById('shortcutBoxCell');
-  const shortcutBoxAction = document.getElementById('shortcutBoxAction');
-  const selectCell = document.getElementById('shortcutCell');
-  const selectAction = document.getElementById('shortcutAction');
+  // One select + one key preview per configurable action
+  const shortcutControls = {
+    cell: { select: document.getElementById('shortcutCell'), box: document.getElementById('shortcutBoxCell') },
+    action: { select: document.getElementById('shortcutAction'), box: document.getElementById('shortcutBoxAction') },
+    table: { select: document.getElementById('shortcutTable'), box: document.getElementById('shortcutBoxTable') }
+  };
   const ctrlWarning = document.getElementById('ctrlWarning');
   const conflictError = document.getElementById('conflictError');
   const resetButton = document.getElementById('resetShortcuts');
@@ -31,8 +34,10 @@ document.addEventListener('DOMContentLoaded', () => {
     versionEl.textContent = 'v' + chrome.runtime.getManifest().version;
   }
 
-  // Populate both selects with the same option list
-  for (const select of [selectCell, selectAction]) {
+  // Populate every select with the same option list
+  for (const name of SHORTCUT_ACTIONS) {
+    const select = shortcutControls[name].select;
+    select.addEventListener('change', onShortcutChange);
     for (const value of SHORTCUT_OPTIONS) {
       const option = document.createElement('option');
       option.value = value;
@@ -56,17 +61,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  selectCell.addEventListener('change', onShortcutChange);
-  selectAction.addEventListener('change', onShortcutChange);
-
   resetButton.addEventListener('click', () => {
     renderShortcuts(DEFAULT_SHORTCUTS);
     saveSettings({ shortcuts: { ...DEFAULT_SHORTCUTS } });
   });
 
   function onShortcutChange() {
-    const next = { cell: selectCell.value, action: selectAction.value };
-    const hasConflict = next.cell === next.action;
+    const next = {};
+    for (const name of SHORTCUT_ACTIONS) next[name] = shortcutControls[name].select.value;
+    const hasConflict = new Set(Object.values(next)).size < SHORTCUT_ACTIONS.length;
 
     conflictError.hidden = !hasConflict;
     updateShortcutPreview(next);
@@ -76,17 +79,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderShortcuts(shortcuts) {
-    selectCell.value = shortcuts.cell;
-    selectAction.value = shortcuts.action;
+    for (const name of SHORTCUT_ACTIONS) shortcutControls[name].select.value = shortcuts[name];
     conflictError.hidden = true;
     updateShortcutPreview(shortcuts);
   }
 
   function updateShortcutPreview(shortcuts) {
-    renderKeys(shortcutBoxCell, shortcuts.cell);
-    renderKeys(shortcutBoxAction, shortcuts.action);
+    for (const name of SHORTCUT_ACTIONS) renderKeys(shortcutControls[name].box, shortcuts[name]);
 
-    const usesCtrl = [shortcuts.cell, shortcuts.action].some((value) => value.split('+').includes('ctrl'));
+    const usesCtrl = Object.values(shortcuts).some((value) => value.split('+').includes('ctrl'));
     ctrlWarning.hidden = !usesCtrl;
     ctrlWarning.textContent = `${isMac ? '⌘ CMD' : 'CTRL'} + Click collides with multi-row selection in ` +
       'Business Central — while this shortcut is active, you cannot select several rows with it.';
@@ -104,11 +105,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // Same resolution as normalizeShortcuts in content/content.js
   function normalizeShortcuts(value) {
-    const cell = value && SHORTCUT_OPTIONS.includes(value.cell) ? value.cell : DEFAULT_SHORTCUTS.cell;
-    const action = value && SHORTCUT_OPTIONS.includes(value.action) ? value.action : DEFAULT_SHORTCUTS.action;
-    if (cell === action) return { ...DEFAULT_SHORTCUTS };
-    return { cell, action };
+    const result = {};
+    const used = new Set();
+    for (const name of SHORTCUT_ACTIONS) {
+      const candidates = [value && value[name], DEFAULT_SHORTCUTS[name], ...SHORTCUT_OPTIONS];
+      const pick = candidates.find((c) => SHORTCUT_OPTIONS.includes(c) && !used.has(c));
+      result[name] = pick;
+      used.add(pick);
+    }
+    return result;
   }
 
   function saveSettings(values, onSaved) {

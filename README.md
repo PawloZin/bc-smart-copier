@@ -24,12 +24,13 @@
 |---|---|---|
 | `Shift` + **Click** | Copy cell value | `10000` or `[No.]` |
 | `Alt` + `Shift` + **Click** | Copy action path | `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}` |
+| Hold `Alt` + **Click** a table | Copy whole table (TSV) | Rows and columns ready to paste into Excel |
 
 On Mac, `Alt` is the `⌥ Option` key and `Ctrl` also matches `⌘ Cmd`. The popup shows macOS key symbols (`⇧` `⌥` `⌘`).
 
 ### ⌨️ Custom shortcuts
 
-Both shortcuts can be changed in the extension popup (**Keyboard shortcuts** section). Available options: `Shift`, `Alt`, `Ctrl / Cmd ⌘` and the combinations `Alt + Shift`, `Ctrl + Shift`, `Ctrl + Alt`. The two shortcuts must be different.
+All three shortcuts can be changed in the extension popup (**Keyboard shortcuts** section). Available options: `Shift`, `Alt`, `Ctrl / Cmd ⌘` and the combinations `Alt + Shift`, `Ctrl + Shift`, `Ctrl + Alt`. Each action must use a different shortcut.
 
 > **Warning**: `Ctrl / Cmd ⌘ + Click` is used by Business Central to select multiple rows. While a shortcut using `Ctrl / Cmd ⌘` is active, that multi-row selection will not work.
 
@@ -51,7 +52,13 @@ Both shortcuts can be changed in the extension popup (**Keyboard shortcuts** sec
    - **Direct action**: `open page [Sales Order] and go to [Home] tab and click {Post}`
    - **Nested submenu**: `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}`
 
-> **Note**: Both shortcuts block the whole click gesture (`preventDefault()` / `stopPropagation()`) to prevent unintended BC or browser actions — such as link navigation, entering edit mode, opening report request pages, or the browser's Shift + Click (new window) and Alt + Click (download) link behavior.
+### Copy Whole Table — hold `Alt` + Left Click
+1. Hold **ALT** (or **⌥ OPTION** on Mac) and point at any table — it gets a green outline (a separate overlay; the table's own styles are not changed).
+2. Click the outlined table.
+3. All visible rows and cells (`th` / `td`) are copied as tab-separated text (TSV) — paste with `Ctrl + V` into Excel or Google Sheets to get the same rows and columns.
+4. Releasing the key, moving off the table or switching windows removes the outline. Without the key held, the page works as usual.
+
+> **Note**: All shortcuts block the whole click gesture (`preventDefault()` / `stopPropagation()`) to prevent unintended BC or browser actions — such as link navigation, entering edit mode, opening report request pages, or the browser's Shift + Click (new window) and Alt + Click (download) link behavior.
 
 ---
 
@@ -87,7 +94,7 @@ Load directly from source files (Developer Mode):
 ## 📂 Project Structure
 
 - `manifest.json` – Extension configuration (Manifest V3).
-- `content/content.js` – Two configurable shortcuts: copy cell value (default `Shift + Click`) and copy the full action path including submenus (default `Alt + Shift + Click`, Page › Tab › Submenu › Action).
+- `content/content.js` – Two configurable shortcuts: copy cell value (default `Shift + Click`) and copy the full action path including submenus (default `Alt + Shift + Click`, Page › Tab › Submenu › Action), and Table Copier (default hold `Alt` + click a table).
 - `content/content.css` – Styles for cell highlight animation and Toast notifications.
 - `popup/` – Popup interface: enable/disable toggle and shortcut configuration.
 - `assets/icons/` – Extension icons set (SVG sources & PNG formats).
