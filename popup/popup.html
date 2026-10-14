@@ -52,6 +52,17 @@
           <code>open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}</code></em>
       </p>
     </div>
+
+    <div class="shortcut-divider"></div>
+
+    <div class="shortcut-row">
+      <div class="shortcut-label">Copy whole table</div>
+      <div class="shortcut-box" id="shortcutBoxTable"></div>
+      <p class="instruction-desc">
+        Hold the keys and point at any table — it gets a green outline. Click it to copy all
+        visible rows as tab-separated text, ready to paste into Excel.
+      </p>
+    </div>
   </div>
 
   <div class="card settings-card">
@@ -67,9 +78,14 @@
       <select id="shortcutAction"></select>
     </label>
 
+    <label class="setting-row" for="shortcutTable">
+      <span class="setting-label">Copy whole table</span>
+      <select id="shortcutTable"></select>
+    </label>
+
     <p class="setting-message setting-warning" id="ctrlWarning" hidden></p>
     <p class="setting-message setting-error" id="conflictError" hidden>
-      Both actions cannot use the same shortcut.
+      Each action needs a different shortcut.
     </p>
 
     <button type="button" class="reset-button" id="resetShortcuts">Restore defaults</button>
