@@ -290,3 +290,45 @@ kbd {
   cursor: pointer;
   text-decoration: underline;
 }
+
+/* Error report settings */
+.setting-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #107c41;
+  cursor: pointer;
+}
+
+.setting-column {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setting-column textarea {
+  font-family: monospace;
+  font-size: 12px;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  padding: 4px 6px;
+  resize: vertical;
+}
+
+.setting-column textarea:focus {
+  outline: 2px solid #107c41;
+  outline-offset: 1px;
+}
+
+.setting-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+.setting-hint code {
+  font-family: monospace;
+  background: #f3f4f6;
+  border-radius: 3px;
+  padding: 0 3px;
+}

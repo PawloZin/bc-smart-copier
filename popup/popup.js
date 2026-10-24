@@ -2,6 +2,13 @@
 const SHORTCUT_OPTIONS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
 const SHORTCUT_ACTIONS = ['cell', 'action', 'table'];
 const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift', table: 'alt' };
+// Must stay in sync with DEFAULT_ERROR_REPORT in content/content.js
+const DEFAULT_ERROR_REPORT = {
+  errorButtons: true,
+  errorScreenshot: false,
+  environments: 'STG = STG\nQA = QA\nclient = PROD'
+};
+const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
 
 document.addEventListener('DOMContentLoaded', () => {
   const toggle = document.getElementById('toggleExtension');
@@ -17,6 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const ctrlWarning = document.getElementById('ctrlWarning');
   const conflictError = document.getElementById('conflictError');
   const resetButton = document.getElementById('resetShortcuts');
+  const errorButtons = document.getElementById('errorButtons');
+  const errorScreenshot = document.getElementById('errorScreenshot');
+  const screenshotWarning = document.getElementById('screenshotWarning');
+  const environments = document.getElementById('environments');
 
   const isMac = (typeof navigator !== 'undefined') && (
     (navigator.userAgentData && navigator.userAgentData.platform === 'macOS') ||
@@ -58,6 +69,47 @@ document.addEventListener('DOMContentLoaded', () => {
     toggle.addEventListener('change', () => {
       const isEnabled = toggle.checked;
       saveSettings({ enabled: isEnabled }, () => updateUI(isEnabled));
+    });
+
+    chrome.storage.local.get(DEFAULT_ERROR_REPORT, (res) => {
+      errorButtons.checked = res.errorButtons !== false;
+      errorScreenshot.checked = res.errorScreenshot === true;
+      environments.value = res.environments;
+      if (errorScreenshot.checked) checkScreenshotPermission();
+    });
+
+    errorButtons.addEventListener('change', () => saveSettings({ errorButtons: errorButtons.checked }));
+    errorScreenshot.addEventListener('change', onScreenshotChange);
+
+    let environmentsTimer = 0;
+    environments.addEventListener('input', () => {
+      clearTimeout(environmentsTimer);
+      environmentsTimer = setTimeout(() => saveSettings({ environments: environments.value }), 300);
+    });
+  }
+
+  // The option is saved before asking: the permission prompt may close the
+  // popup, and the next opening then shows whether access was granted
+  function onScreenshotChange() {
+    const wanted = errorScreenshot.checked;
+    screenshotWarning.hidden = true;
+    saveSettings({ errorScreenshot: wanted });
+    if (!chrome.permissions) return;
+    if (!wanted) {
+      chrome.permissions.remove(SCREENSHOT_PERMISSION, () => void chrome.runtime.lastError);
+      return;
+    }
+    chrome.permissions.request(SCREENSHOT_PERMISSION, (granted) => {
+      if (granted) return;
+      errorScreenshot.checked = false;
+      saveSettings({ errorScreenshot: false });
+    });
+  }
+
+  function checkScreenshotPermission() {
+    if (!chrome.permissions) return;
+    chrome.permissions.contains(SCREENSHOT_PERMISSION, (granted) => {
+      screenshotWarning.hidden = granted;
     });
   }
 
