@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - the error message and BC's technical details (AL call stack etc.), taken from BC's own *Copy error details* menu item in any UI language;
   - the record: all fields of the page and the current (focused) row of every grid, with column names. Hidden fields and columns and FactBoxes are skipped.
 - *Copy for AI agent* produces Markdown with a short task for the agent (explain the cause, search the knowledge base and Jira issues for similar cases, propose a fix). *Copy for Jira* produces Jira wiki markup plus HTML, with `Summary:`, `Environment:` lines and a *Steps to reproduce* placeholder.
-- **Optional screenshot**: With *Screenshot (second click)* switched on, the visible tab is captured (without the extension's own buttons) and the clicked button turns into **Copy screenshot**. Enabling it asks for the optional `<all_urls>` host permission; switching it off releases the permission.
+- **Optional screenshot**: With *Screenshot (second click)* switched on, the visible tab is captured (without the extension's own buttons) and the clicked button turns into **Copy screenshot**. The screenshot is kept in session storage (memory only); the second click opens a short-lived extension tab that copies it and closes itself — on `http://` BC servers pages cannot put images into the clipboard. Enabling it asks for the optional `<all_urls>` host permission; switching it off releases the permission.
+- *Copy for Jira* sets text and HTML through a `copy` event when the async Clipboard API is unavailable (`http://` BC servers), so the rich version is kept there too.
 - Error report settings in the popup: show buttons, screenshot, environment rules.
 - Test fixtures: *Customer Ledger Entries* with an error dialog, *Merge Duplicate* with a field validation error.
 

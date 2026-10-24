@@ -68,7 +68,7 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
    - company, page, record, field, time and URL;
    - the error message and BC's **technical details** (AL call stack) — the extension clicks BC's own *Copy error details* item and takes its text;
    - the **record**: all fields of the page and the focused row of each grid (e.g. document header + current line), with column names.
-4. Optional **screenshot** (popup → *Error reports*): the first click also captures the visible tab, and the button changes to **Copy screenshot** — click it to copy the image.
+4. Optional **screenshot** (popup → *Error reports*): the first click also captures the visible tab, and the button changes to **Copy screenshot** — click it and a small extension tab copies the image and closes itself (needed because `http://` BC pages cannot put images into the clipboard).
 
 > **Note**: All shortcuts block the whole click gesture (`preventDefault()` / `stopPropagation()`) to prevent unintended BC or browser actions — such as link navigation, entering edit mode, opening report request pages, or the browser's Shift + Click (new window) and Alt + Click (download) link behavior.
 
@@ -111,6 +111,7 @@ Load directly from source files (Developer Mode):
   It also detects BC errors and adds the error report buttons.
 - `content/page-hook.js` – Runs in the page context; while an error report is being built it takes the text BC's *Copy error details* writes to the clipboard.
 - `background.js` – Service worker that takes the optional error screenshot.
+- `screenshot/` – Short-lived page that copies the screenshot to the clipboard.
 - `content/content.css` – Styles for cell highlight animation, Toast notifications, Table Copier overlay and error report buttons.
 - `popup/` – Popup interface: enable/disable toggle, shortcut configuration and error report settings.
 - `assets/icons/` – Extension icons set (SVG sources & PNG formats).

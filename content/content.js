@@ -782,7 +782,7 @@
   let errorPanel = null;
   let errorPanelRoot = null;
   let dismissedValidation = '';
-  let pendingShot = null; // { root, kind, blob } — screenshot waiting for the second click
+  let pendingShot = null; // { root, kind } — screenshot waiting for the second click
   let reportBusy = false;
 
   new MutationObserver(scheduleErrorScan).observe(document.documentElement, { childList: true, subtree: true });
@@ -907,12 +907,10 @@
     if (reportBusy) return;
 
     if (pendingShot && pendingShot.root === root && pendingShot.kind === kind) {
-      const blob = pendingShot.blob;
       pendingShot = null;
       refreshErrorButtons();
-      const copied = await copyImageToClipboard(blob);
-      showToast(copied ? 'Screenshot copied' : 'Copy error',
-        copied ? 'Paste it next to the error report.' : 'Failed to copy the screenshot.', !copied);
+      const error = await copyScreenshot();
+      if (error) showToast('Copy error', error, true);
       return;
     }
 
@@ -934,8 +932,8 @@
 
       const title = kind === 'jira' ? 'Copied for Jira' : 'Copied for AI agent';
       const note = report.details ? 'With technical details.' : 'Technical details were not available.';
-      if (shot && shot.blob) {
-        pendingShot = { root, kind, blob: shot.blob };
+      if (shot && shot.ok) {
+        pendingShot = { root, kind };
         showToast(title, `${note} Click "Copy screenshot" for the screenshot.`, false);
       } else {
         showToast(title, note, false);
@@ -1285,9 +1283,9 @@
   // --- Screenshot ---------------------------------------------------------------
 
   /**
-   * Screenshot of the visible tab, taken by the service worker. Our own
-   * buttons, panel and toasts are hidden while it is taken.
-   * Returns { blob } or { error }.
+   * Screenshot of the visible tab, taken and kept by the service worker.
+   * Our own buttons, panel and toasts are hidden while it is taken.
+   * Returns { ok } or { error }.
    */
   async function captureScreenshot() {
     const root = document.documentElement;
@@ -1296,7 +1294,7 @@
       // Let the browser paint the page without our UI (rAF would stall in background tabs)
       await new Promise((resolve) => setTimeout(resolve, 120));
       const response = await chrome.runtime.sendMessage({ type: 'capture-visible-tab' });
-      if (response && response.dataUrl) return { blob: dataUrlToBlob(response.dataUrl) };
+      if (response && response.ok) return { ok: true };
       const reason = (response && response.error) || '';
       return {
         error: /permission|activeTab|all_urls/i.test(reason)
@@ -1310,26 +1308,25 @@
     }
   }
 
-  function dataUrlToBlob(dataUrl) {
-    const [head, data] = dataUrl.split(',');
-    const binary = atob(data);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    const type = (head.match(/^data:([^;,]+)/) || [])[1] || 'image/png';
-    return new Blob([bytes], { type });
-  }
-
-  async function copyImageToClipboard(blob) {
+  /**
+   * Images cannot be put into the clipboard from http:// BC pages, so a short
+   * extension tab copies the stored screenshot and closes itself.
+   * Returns an error message or ''.
+   */
+  async function copyScreenshot() {
     try {
-      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
-      return true;
+      const response = await chrome.runtime.sendMessage({ type: 'copy-screenshot' });
+      return response && response.ok ? '' : ((response && response.error) || 'Failed to copy the screenshot.');
     } catch (err) {
-      console.warn('BC Smart Copier: Image copy failed', err);
-      return false;
+      return 'Reload the page after updating the extension.';
     }
   }
 
-  /** Text + HTML in one clipboard entry; plain text only when that fails */
+  /**
+   * Text + HTML in one clipboard entry. On http:// BC pages there is no async
+   * Clipboard API, so the data is set in a 'copy' event instead. Plain text
+   * only when both fail.
+   */
   async function copyRichToClipboard(text, html) {
     try {
       if (navigator.clipboard && navigator.clipboard.write && typeof ClipboardItem !== 'undefined') {
@@ -1340,9 +1337,30 @@
         return true;
       }
     } catch (err) {
-      console.warn('BC Smart Copier: Rich copy failed, copying plain text...', err);
+      console.warn('BC Smart Copier: Rich copy failed, trying copy event...', err);
     }
+
+    if (copyWithCopyEvent({ 'text/plain': text, 'text/html': html })) return true;
     return copyToClipboard(text);
+  }
+
+  function copyWithCopyEvent(data) {
+    let written = false;
+    const onCopy = (e) => {
+      if (!e.clipboardData) return;
+      for (const [type, value] of Object.entries(data)) e.clipboardData.setData(type, value);
+      written = true;
+      e.preventDefault();
+      e.stopImmediatePropagation(); // BC's own copy handlers must not overwrite it
+    };
+    window.addEventListener('copy', onCopy, true);
+    try {
+      return document.execCommand('copy') && written;
+    } catch (err) {
+      return false;
+    } finally {
+      window.removeEventListener('copy', onCopy, true);
+    }
   }
 
   // ---------------------------------------------------------------------------
