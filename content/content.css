@@ -122,3 +122,103 @@
   background-color: rgba(16, 124, 65, 0.08);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.6), 0 0 10px rgba(11, 106, 59, 0.35);
 }
+
+/* Error report — buttons in BC error dialogs and the validation error panel */
+.bc-sc-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 4px;
+}
+
+.bc-sc-error-button {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: #0b6a3b;
+  background: #ffffff;
+  border: 1px solid #107c41;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+.bc-sc-error-button:hover {
+  background: rgba(16, 124, 65, 0.08);
+}
+
+.bc-sc-error-button:focus-visible {
+  outline: 2px solid #107c41;
+  outline-offset: 1px;
+}
+
+.bc-sc-error-button:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.bc-sc-error-button.bc-sc-error-button-shot {
+  color: #ffffff;
+  background: #107c41;
+}
+
+#bc-smart-copier-error-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483645;
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 10px 12px 8px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-left: 4px solid #c0392b;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.12);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #201f1e;
+}
+
+#bc-smart-copier-error-panel .bc-sc-error-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #a93226;
+}
+
+#bc-smart-copier-error-panel .bc-sc-error-panel-close {
+  font-size: 16px;
+  line-height: 1;
+  color: #6b7280;
+  background: none;
+  border: none;
+  padding: 0 2px;
+  cursor: pointer;
+}
+
+#bc-smart-copier-error-panel .bc-sc-error-panel-message {
+  margin-top: 4px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  max-height: 52px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+#bc-smart-copier-error-panel .bc-sc-error-actions {
+  margin: 8px 0 0;
+}
+
+/* Hidden while a screenshot is taken */
+.bc-sc-capturing .bc-sc-error-ui,
+.bc-sc-capturing #bc-smart-copier-toast-container {
+  visibility: hidden !important;
+}

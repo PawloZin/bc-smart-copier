@@ -14,7 +14,7 @@
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version" id="version">v1.4.1</span>
+    <span class="version" id="version">v1.5.0</span>
   </div>
 
   <div class="card status-card">
@@ -89,6 +89,34 @@
     </p>
 
     <button type="button" class="reset-button" id="resetShortcuts">Restore defaults</button>
+  </div>
+
+  <div class="card settings-card">
+    <div class="instruction-title">Error reports</div>
+    <p class="instruction-desc">
+      When Business Central shows an error, buttons copy it for an AI agent or for Jira — with the
+      environment, page, error details and the current record.
+    </p>
+
+    <label class="setting-row" for="errorButtons">
+      <span class="setting-label">Copy buttons on errors</span>
+      <input type="checkbox" id="errorButtons" checked>
+    </label>
+
+    <label class="setting-row" for="errorScreenshot">
+      <span class="setting-label">Screenshot (second click)</span>
+      <input type="checkbox" id="errorScreenshot">
+    </label>
+    <p class="setting-message setting-warning" id="screenshotWarning" hidden>
+      Screenshot access was not granted. Switch the option on again and allow access.
+    </p>
+
+    <label class="setting-column" for="environments">
+      <span class="setting-label">Environment by address</span>
+      <textarea id="environments" rows="3" spellcheck="false"></textarea>
+      <span class="setting-hint">One <code>fragment = name</code> per line; the first fragment found in the
+        address wins.</span>
+    </label>
   </div>
 
   <div class="footer">

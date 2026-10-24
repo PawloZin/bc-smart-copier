@@ -26,6 +26,8 @@
 | `Alt` + `Shift` + **Click** | Copy action path | `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}` |
 | Hold `Alt` + **Click** a table | Copy whole table (TSV) | Rows and columns ready to paste into Excel |
 
+| BC error → **Copy for AI agent** / **Copy for Jira** | Copy an error report | Environment, page, error, call stack and current record |
+
 On Mac, `Alt` is the `⌥ Option` key and `Ctrl` also matches `⌘ Cmd`. The popup shows macOS key symbols (`⇧` `⌥` `⌘`).
 
 ### ⌨️ Custom shortcuts
@@ -58,6 +60,16 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 3. All visible rows and cells (`th` / `td`) are copied as tab-separated text (TSV) — paste with `Ctrl + V` into Excel or Google Sheets to get the same rows and columns.
 4. Releasing the key, moving off the table or switching windows removes the outline. Without the key held, the page works as usual.
 
+### Error Reports — Copy for AI agent / Copy for Jira
+1. When BC shows an error dialog, two buttons appear under the message; for a field validation error (red field) they appear in a small panel in the bottom-right corner.
+2. **Copy for AI agent** copies Markdown with the error and a short task for an agent that has your knowledge base (documentation, Jira issues). **Copy for Jira** copies the same data as Jira markup / rich text, starting with `Summary:` and `Environment:` lines.
+3. The report contains:
+   - **Environment** from the page address — rules in the popup, one `fragment = name` per line, first match wins (default `STG = STG`, `QA = QA`, `client = PROD`);
+   - company, page, record, field, time and URL;
+   - the error message and BC's **technical details** (AL call stack) — the extension clicks BC's own *Copy error details* item and takes its text;
+   - the **record**: all fields of the page and the focused row of each grid (e.g. document header + current line), with column names.
+4. Optional **screenshot** (popup → *Error reports*): the first click also captures the visible tab, and the button changes to **Copy screenshot** — click it to copy the image.
+
 > **Note**: All shortcuts block the whole click gesture (`preventDefault()` / `stopPropagation()`) to prevent unintended BC or browser actions — such as link navigation, entering edit mode, opening report request pages, or the browser's Shift + Click (new window) and Alt + Click (download) link behavior.
 
 ---
@@ -67,7 +79,8 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 - **Smart Text Sanitization**: Automatically converts non-breaking spaces (`\u00A0`), normalizes line breaks, and trims excess whitespace.
 - **Stacked Toast Feedback**: Green cell outline animation and stacked floating Toast notifications (anchored bottom-center, top-inserted, 4-second duration, capped at 5 visible toasts).
 - **Toggle Control & Custom Shortcuts**: Enable or disable the extension and choose your own shortcuts via the toolbar popup.
-- **100% Private & Local**: Runs entirely inside your browser with zero external network tracking or data collection.
+- **Error Reports**: One click turns a BC error into a ready report for an AI agent or a Jira issue.
+- **100% Private & Local**: Runs entirely inside your browser with zero external network tracking or data collection. Error reports only go to your clipboard.
 
 ---
 
@@ -95,8 +108,11 @@ Load directly from source files (Developer Mode):
 
 - `manifest.json` – Extension configuration (Manifest V3).
 - `content/content.js` – Two configurable shortcuts: copy cell value (default `Shift + Click`) and copy the full action path including submenus (default `Alt + Shift + Click`, Page › Tab › Submenu › Action), and Table Copier (default hold `Alt` + click a table).
-- `content/content.css` – Styles for cell highlight animation and Toast notifications.
-- `popup/` – Popup interface: enable/disable toggle and shortcut configuration.
+  It also detects BC errors and adds the error report buttons.
+- `content/page-hook.js` – Runs in the page context; while an error report is being built it takes the text BC's *Copy error details* writes to the clipboard.
+- `background.js` – Service worker that takes the optional error screenshot.
+- `content/content.css` – Styles for cell highlight animation, Toast notifications, Table Copier overlay and error report buttons.
+- `popup/` – Popup interface: enable/disable toggle, shortcut configuration and error report settings.
 - `assets/icons/` – Extension icons set (SVG sources & PNG formats).
 - `assets/docs/` – Documentation assets and demo recordings.
 

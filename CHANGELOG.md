@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-10-24
+
+### Added
+- **Error reports**: When Business Central shows an error dialog or a field validation error, the extension adds **Copy for AI agent** and **Copy for Jira** buttons (in the dialog, or in a small panel for validation errors). The copy contains:
+  - the environment, detected from the page address with editable `fragment = name` rules (default `STG = STG`, `QA = QA`, `client = PROD`; first match wins), plus company, page, record, field, time and URL;
+  - the error message and BC's technical details (AL call stack etc.), taken from BC's own *Copy error details* menu item in any UI language;
+  - the record: all fields of the page and the current (focused) row of every grid, with column names. Hidden fields and columns and FactBoxes are skipped.
+- *Copy for AI agent* produces Markdown with a short task for the agent (explain the cause, search the knowledge base and Jira issues for similar cases, propose a fix). *Copy for Jira* produces Jira wiki markup plus HTML, with `Summary:`, `Environment:` lines and a *Steps to reproduce* placeholder.
+- **Optional screenshot**: With *Screenshot (second click)* switched on, the visible tab is captured (without the extension's own buttons) and the clicked button turns into **Copy screenshot**. Enabling it asks for the optional `<all_urls>` host permission; switching it off releases the permission.
+- Error report settings in the popup: show buttons, screenshot, environment rules.
+- Test fixtures: *Customer Ledger Entries* with an error dialog, *Merge Duplicate* with a field validation error.
+
+---
+
 ## [1.4.1] - 2026-10-24
 
 ### Fixed
