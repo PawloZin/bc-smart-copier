@@ -183,6 +183,9 @@
    */
   function findCellElement(target) {
     const cellSelectors = [
+      // Field caption on card pages — sits in the same container as the value,
+      // so it must be matched first or the caption click copies the value
+      '.ms-nav-edit-control-caption',
       'td',
       '[role="gridcell"]',
       '[role="cell"]',
