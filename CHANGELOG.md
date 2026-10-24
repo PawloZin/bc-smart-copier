@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.4.1] - 2026-10-24
 
 ### Fixed
 - **Field caption copied the value**: Clicking a field caption on a card page (e.g. *Omit Default Descr. in Jnl.*) copied the field's value (`No`, or the text of the field) instead of the caption, because caption and value share one container. The caption is now matched first and its own text is copied.
