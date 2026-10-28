@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.3] - 2026-10-28
+
+### Fixed
+- **Error panel on required fields**: Empty mandatory fields (e.g. *Name*, *Customer Posting Group* on a new Customer Card) use the same marker as validation errors, so the error panel appeared with "The value for this field is required." Only fields with BC's error icon count as validation errors now.
+- Test fixture: *Customer Card* with empty required fields.
+
+---
+
+## [1.5.2] - 2026-10-28
+
+### Changed
+- **Bigger error panel at the bottom center**: The error panel moved from the bottom-right corner to the bottom center and is about 50% larger (wider, bigger text and buttons). Toasts are shown above it instead of covering it.
+
+---
+
+## [1.5.1] - 2026-10-28
+
+### Fixed
+- **Error panel missing for error dialogs**: The floating error panel with *Copy for AI agent* / *Copy for Jira* appeared only for field validation errors, so error dialogs (e.g. *Undo Receipt* on a Posted Purchase Receipt) showed the buttons only inside the dialog. The panel now appears for error dialogs too.
+- Test fixture: *Posted Purchase Receipt* with an error dialog.
+
+---
+
 ## [1.5.0] - 2026-10-24
 
 ### Added
