@@ -771,11 +771,11 @@
   // ---------------------------------------------------------------------------
   // ERROR REPORT  ("Copy for AI agent" / "Copy for Jira" on BC errors)
   // ---------------------------------------------------------------------------
-  // Error dialogs get the buttons below the message; every error (dialog or
-  // field validation) also gets a floating panel at the bottom of the page. A click copies the environment (from the page
-  // address), the page, the error message, BC's technical details and the
-  // record the user was working on: all fields of the page plus the current
-  // row of every grid. Optionally a screenshot is taken and copied on a second
+  // Every error (dialog or field validation) gets a floating panel with the
+  // buttons at the bottom of the page — BC's own dialog is left untouched.
+  // A click copies the environment (from the page address), the page, the
+  // error message, BC's technical details and the record the user was working
+  // on: all fields of the page plus the current row of every grid. Optionally a screenshot is taken and copied on a second
   // click. Everything is read on demand and only goes to the clipboard.
 
   // Must stay in sync with content/page-hook.js
@@ -805,16 +805,6 @@
     const active = isEnabled && errorReport.errorButtons !== false;
     if (pendingShot && !pendingShot.root.isConnected) pendingShot = null;
 
-    for (const dialog of document.querySelectorAll('form.error-dialog')) {
-      const bar = dialog.querySelector('.bc-sc-error-actions');
-      if (!active) {
-        if (bar) bar.remove();
-      } else if (!bar) {
-        const place = dialog.querySelector('.dialog-content-alignbox') || dialog.querySelector('.dialog-content') || dialog;
-        place.appendChild(buildErrorActions(() => dialog));
-      }
-    }
-
     updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
   }
 
@@ -842,8 +832,7 @@
 
   /**
    * Floating panel at the bottom of the page for the current error — an
-   * error dialog (which also has the buttons inside) or a field validation
-   * error. Hidden with × until a different error appears.
+   * error dialog or a field validation error. Hidden with × until a different error appears.
    */
   function updateErrorPanel(root) {
     const info = root ? readErrorInfo(root) : null;
@@ -927,9 +916,7 @@
   /** Re-labels the buttons: the one with a screenshot waiting says so */
   function refreshErrorButtons() {
     for (const button of document.querySelectorAll('.bc-sc-error-button')) {
-      const bar = button.closest('.bc-sc-error-actions');
-      const root = bar && bar.parentElement === errorPanel ? errorPanelRoot : button.closest('form.error-dialog');
-      const waiting = pendingShot && pendingShot.root === root && pendingShot.kind === button.dataset.kind;
+      const waiting = pendingShot && pendingShot.root === errorPanelRoot && pendingShot.kind === button.dataset.kind;
       button.textContent = waiting ? 'Copy screenshot' : button.dataset.label;
       button.classList.toggle('bc-sc-error-button-shot', !!waiting);
       button.disabled = reportBusy;
