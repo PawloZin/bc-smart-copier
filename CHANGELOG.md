@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.1] - 2026-10-28
+
+### Fixed
+- **Duplicated buttons on error dialogs**: Error dialogs showed *Copy for AI agent* / *Copy for Jira* twice — inside the dialog and in the error panel. The buttons are now only in the panel at the bottom; BC's dialog is left untouched.
+
+---
+
 ## [1.7.0] - 2026-10-28
 
 ### Changed
