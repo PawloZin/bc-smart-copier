@@ -26,11 +26,19 @@
   const SHORTCUT_ACTIONS = ['cell', 'action', 'table'];
   const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift', table: 'alt' };
 
-  // Must stay in sync with DEFAULT_ERROR_REPORT in popup/popup.js
+  // Must stay in sync with DEFAULT_AGENT_INSTRUCTIONS / DEFAULT_ERROR_REPORT in popup/popup.js
+  const DEFAULT_AGENT_INSTRUCTIONS =
+    'Help investigate this Microsoft Dynamics 365 Business Central error.\n' +
+    '1. Explain what the error means and its most likely cause, using the message, the technical details and the record data above.\n' +
+    '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.\n' +
+    '3. Check the knowledge base thoroughly, including the application code it contains (tables, pages, codeunits, triggers, procedures, event subscribers), and trace where this error is raised and why; base the answer on what you find there.\n' +
+    '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
+    'If something is missing, say what to check in Business Central.';
   const DEFAULT_ERROR_REPORT = {
     errorButtons: true,
     errorScreenshot: false,
-    environments: 'STG = STG\nQA = QA\nclient = PROD'
+    environments: 'STG = STG\nQA = QA\nclient = PROD',
+    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS
   };
 
   let isEnabled = true;
@@ -1236,9 +1244,8 @@
   }
 
   function reportSummary(report) {
-    const env = report.environment ? `[${report.environment}] ` : '';
     const message = report.message.length > 120 ? report.message.slice(0, 119) + '…' : report.message;
-    return `${env}${report.page ? report.page + ': ' : ''}${message}`;
+    return `${report.page ? report.page + ': ' : ''}${message}`;
   }
 
   /** Markdown for an AI agent: context, data and what to do with it */
@@ -1258,30 +1265,65 @@
       out.push('## Technical details', '', fence + 'text', report.details, fence, '');
     }
 
-    out.push('## Task', '',
-      'Help investigate this Microsoft Dynamics 365 Business Central error.',
-      '1. Explain what the error means and its most likely cause, using the message, the technical details and the record data above.',
-      '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.',
-      '3. Suggest how to confirm the cause and how to fix it (setup, data or code).',
-      'If something is missing, say what to check in Business Central.');
+    // Editable in the popup; an emptied field falls back to the default
+    const instructions = String(errorReport.agentInstructions || '').trim() || DEFAULT_AGENT_INSTRUCTIONS;
+    out.push('## Task', '', instructions);
     return out.join('\n');
+  }
+
+  /**
+   * Bug template used in Jira. Fields the extension cannot know (role,
+   * expected result, further steps) stay empty for the reporter.
+   */
+  function jiraBugFields(report) {
+    const preconditions = [];
+    if (report.company) preconditions.push(`Company: ${report.company}`);
+    if (report.page || report.pageId) {
+      preconditions.push(`Page: ${report.page || '?'}${report.pageId ? ` (page ${report.pageId})` : ''}`);
+    }
+    if (report.record) preconditions.push(`Record: ${report.record}`);
+
+    const steps = [`Open ${report.page || 'the page'}${report.record ? ` for ${report.record}` : ''}`];
+    if (report.field) steps.push(`Enter a value in the field ${report.field}`);
+    steps.push('');
+
+    return {
+      summary: reportSummary(report),
+      environment: report.environment || `unknown (${report.host})`,
+      preconditions,
+      steps,
+      actual: report.field ? `${report.field}: ${report.message}` : report.message,
+      additional: [`Time: ${report.time}`, `URL: ${report.url}`]
+    };
   }
 
   /** Jira wiki markup — the plain-text half of the Jira copy */
   function buildJiraText(report) {
     const escape = (value) => (value || '').replace(/([[\]{}|*_^+~!])/g, '\\$1').replace(/\s*\n\s*/g, ' ');
-    const out = [`Summary: ${reportSummary(report)}`, '', ...reportHeaderLines(report), '',
-      'h3. Error message', `{quote}${escape(report.message)}{quote}`, '',
-      'h3. Steps to reproduce', '# ', ''];
+    const bug = jiraBugFields(report);
+    const out = [
+      `Short BUG description: ${escape(bug.summary)}`,
+      `Environment: ${escape(bug.environment)}`,
+      'Role/actor: ',
+      'Pre conditions:',
+      ...bug.preconditions.map((line) => `* ${escape(line)}`),
+      'Steps to reproduce the BUG:',
+      ...bug.steps.map((step) => `# ${escape(step)}`),
+      `Actual result: ${escape(bug.actual)}`,
+      'Expected results: ',
+      'Additional data:',
+      ...bug.additional.map((line) => `* ${line}`), // time and URL — escaping would break the link
+      ''
+    ];
 
     for (const section of report.sections) {
-      out.push(`h3. ${escape(section.title)}`, '||Field||Value||');
+      out.push(`h4. ${escape(section.title)}`, '||Field||Value||');
       for (const [name, value] of section.rows) out.push(`|${escape(name) || ' '}|${escape(value) || ' '}|`);
       out.push('');
     }
 
     if (report.details) {
-      out.push('h3. Technical details', '{noformat}', report.details.replace(/\{noformat\}/gi, '{ noformat }'), '{noformat}');
+      out.push('h4. Technical details', '{noformat}', report.details.replace(/\{noformat\}/gi, '{ noformat }'), '{noformat}');
     }
     return out.join('\n');
   }
@@ -1290,18 +1332,28 @@
   function buildJiraHtml(report) {
     const esc = (value) => String(value || '')
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-    const html = [`<p>Summary: ${esc(reportSummary(report))}</p>`,
-      `<p>${reportHeaderLines(report).map(esc).join('<br>')}</p>`,
-      '<h3>Error message</h3>', `<blockquote>${esc(report.message)}</blockquote>`,
-      '<h3>Steps to reproduce</h3>', '<ol><li></li></ol>'];
+    const field = (label, value) => `<p><b>${label}:</b> ${esc(value)}</p>`;
+    const list = (tag, items) => items.length ? `<${tag}>${items.map((item) => `<li>${esc(item)}</li>`).join('')}</${tag}>` : '';
+    const bug = jiraBugFields(report);
+
+    const html = [
+      field('Short BUG description', bug.summary),
+      field('Environment', bug.environment),
+      field('Role/actor', ''),
+      field('Pre conditions', ''), list('ul', bug.preconditions),
+      field('Steps to reproduce the BUG', ''), list('ol', bug.steps),
+      field('Actual result', bug.actual),
+      field('Expected results', ''),
+      field('Additional data', ''), list('ul', bug.additional)
+    ];
 
     for (const section of report.sections) {
-      html.push(`<h3>${esc(section.title)}</h3>`, '<table><tr><th>Field</th><th>Value</th></tr>');
+      html.push(`<h4>${esc(section.title)}</h4>`, '<table><tr><th>Field</th><th>Value</th></tr>');
       for (const [name, value] of section.rows) html.push(`<tr><td>${esc(name)}</td><td>${esc(value)}</td></tr>`);
       html.push('</table>');
     }
 
-    if (report.details) html.push('<h3>Technical details</h3>', `<pre>${esc(report.details)}</pre>`);
+    if (report.details) html.push('<h4>Technical details</h4>', `<pre>${esc(report.details)}</pre>`);
     return html.join('');
   }
 

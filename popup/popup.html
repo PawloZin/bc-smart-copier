@@ -14,7 +14,7 @@
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version" id="version">v1.5.3</span>
+    <span class="version" id="version">v1.7.0</span>
   </div>
 
   <div class="card status-card">
@@ -117,6 +117,14 @@
       <span class="setting-hint">One <code>fragment = name</code> per line; the first fragment found in the
         address wins.</span>
     </label>
+
+    <label class="setting-column" for="agentInstructions">
+      <span class="setting-label">Instructions for the AI agent</span>
+      <textarea id="agentInstructions" rows="8" spellcheck="false"></textarea>
+      <span class="setting-hint">Added at the end of <em>Copy for AI agent</em> under <code>## Task</code>.
+        An empty field uses the default.</span>
+    </label>
+    <button type="button" class="reset-button" id="resetInstructions">Restore default instructions</button>
   </div>
 
   <div class="footer">
