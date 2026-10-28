@@ -61,7 +61,7 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 4. Releasing the key, moving off the table or switching windows removes the outline. Without the key held, the page works as usual.
 
 ### Error Reports — Copy for AI agent / Copy for Jira
-1. When BC shows an error dialog or a field validation error (red field), two buttons appear in a panel at the bottom of the page — for dialogs also under the message.
+1. When BC shows an error dialog or a field validation error (red field), two buttons appear in a panel at the bottom center of the page — for dialogs also under the message.
 2. **Copy for AI agent** copies Markdown with the error and a short task for an agent that has your knowledge base (documentation, Jira issues). **Copy for Jira** copies the same data as Jira markup / rich text, starting with `Summary:` and `Environment:` lines.
 3. The report contains:
    - **Environment** from the page address — rules in the popup, one `fragment = name` per line, first match wins (default `STG = STG`, `QA = QA`, `client = PROD`);

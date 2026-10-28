@@ -12,7 +12,7 @@
 /* Toast notification container - anchored at bottom-center */
 #bc-smart-copier-toast-container {
   position: fixed;
-  bottom: 32px;
+  bottom: calc(32px + var(--bc-sc-panel-space, 0px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 2147483647;
@@ -163,20 +163,22 @@
   background: #107c41;
 }
 
+/* Bottom-center panel; toasts move above it (--bc-sc-panel-space is set by content.js) */
 #bc-smart-copier-error-panel {
   position: fixed;
-  right: 16px;
+  left: 50%;
   bottom: 16px;
+  transform: translateX(-50%);
   z-index: 2147483645;
-  width: 320px;
+  width: 480px;
   max-width: calc(100vw - 32px);
   box-sizing: border-box;
-  padding: 10px 12px 8px;
+  padding: 15px 18px 12px;
   background: #ffffff;
   border: 1px solid #e5e7eb;
-  border-left: 4px solid #c0392b;
-  border-radius: 8px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.12);
+  border-left: 6px solid #c0392b;
+  border-radius: 10px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.12);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   color: #201f1e;
 }
@@ -185,7 +187,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -193,20 +195,19 @@
 }
 
 #bc-smart-copier-error-panel .bc-sc-error-panel-close {
-  font-size: 16px;
+  font-size: 22px;
   line-height: 1;
   color: #6b7280;
   background: none;
   border: none;
-  padding: 0 2px;
+  padding: 0 4px;
   cursor: pointer;
 }
 
 #bc-smart-copier-error-panel .bc-sc-error-panel-message {
-  margin-top: 4px;
-  font-size: 12.5px;
+  margin-top: 6px;
+  font-size: 16px;
   line-height: 1.4;
-  max-height: 52px;
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -214,7 +215,14 @@
 }
 
 #bc-smart-copier-error-panel .bc-sc-error-actions {
-  margin: 8px 0 0;
+  gap: 12px;
+  margin: 12px 0 0;
+}
+
+#bc-smart-copier-error-panel .bc-sc-error-button {
+  font-size: 15px;
+  padding: 8px 15px;
+  border-radius: 6px;
 }
 
 /* Hidden while a screenshot is taken */

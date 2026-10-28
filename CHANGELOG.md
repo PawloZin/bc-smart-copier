@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.2] - 2026-10-28
+
+### Changed
+- **Bigger error panel at the bottom center**: The error panel moved from the bottom-right corner to the bottom center and is about 50% larger (wider, bigger text and buttons). Toasts are shown above it instead of covering it.
+
+---
+
 ## [1.5.1] - 2026-10-28
 
 ### Fixed

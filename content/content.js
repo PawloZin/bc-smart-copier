@@ -837,8 +837,7 @@
   function updateErrorPanel(root) {
     const info = root ? readErrorInfo(root) : null;
     if (!info || info.message === dismissedError) {
-      if (errorPanel) errorPanel.remove();
-      errorPanelRoot = null;
+      hideErrorPanel();
       return;
     }
 
@@ -858,8 +857,7 @@
       close.textContent = '×';
       close.addEventListener('click', () => {
         dismissedError = errorPanel.querySelector('.bc-sc-error-panel-message').textContent;
-        errorPanel.remove();
-        errorPanelRoot = null;
+        hideErrorPanel();
       });
       header.append(title, close);
 
@@ -875,6 +873,18 @@
     if (messageEl.textContent !== text) messageEl.textContent = text;
     messageEl.title = info.field ? `${info.field}: ${text}` : text;
     if (!errorPanel.isConnected) (document.body || document.documentElement).appendChild(errorPanel);
+
+    // Toasts share the bottom center — keep them above the panel
+    const space = errorPanel.offsetHeight + 16 + 'px';
+    if (document.documentElement.style.getPropertyValue('--bc-sc-panel-space') !== space) {
+      document.documentElement.style.setProperty('--bc-sc-panel-space', space);
+    }
+  }
+
+  function hideErrorPanel() {
+    if (errorPanel) errorPanel.remove();
+    errorPanelRoot = null;
+    document.documentElement.style.removeProperty('--bc-sc-panel-space');
   }
 
   function buildErrorActions(getRoot) {
