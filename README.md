@@ -8,6 +8,10 @@
   A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b>.
 </p>
 
+<p align="center">
+  🤖 <i>This is a vibe-coded extension — built with AI assistance.</i>
+</p>
+
 ---
 
 ## 🎬 Demo
