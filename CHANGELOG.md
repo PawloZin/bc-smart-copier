@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.7.0] - 2026-10-28
+
+### Changed
+- **Jira bug template**: *Copy for Jira* now follows the team's bug layout — *Short BUG description*, *Environment*, *Role/actor*, *Pre conditions*, *Steps to reproduce the BUG*, *Actual result*, *Expected results*, *Additional data*. Known data is filled in (page and error, environment, company / page / record, first step "Open …", the error as the actual result, time, URL, record tables and technical details); *Role/actor*, *Expected results* and further steps stay empty for the reporter.
+
+---
+
 ## [1.6.0] - 2026-10-28
 
 ### Added
