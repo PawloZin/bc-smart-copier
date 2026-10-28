@@ -763,8 +763,8 @@
   // ---------------------------------------------------------------------------
   // ERROR REPORT  ("Copy for AI agent" / "Copy for Jira" on BC errors)
   // ---------------------------------------------------------------------------
-  // Error dialogs get the buttons below the message; field validation errors
-  // get a small floating panel. A click copies the environment (from the page
+  // Error dialogs get the buttons below the message; every error (dialog or
+  // field validation) also gets a floating panel at the bottom of the page. A click copies the environment (from the page
   // address), the page, the error message, BC's technical details and the
   // record the user was working on: all fields of the page plus the current
   // row of every grid. Optionally a screenshot is taken and copied on a second
@@ -781,7 +781,7 @@
 
   let errorPanel = null;
   let errorPanelRoot = null;
-  let dismissedValidation = '';
+  let dismissedError = '';
   let pendingShot = null; // { root, kind } — screenshot waiting for the second click
   let reportBusy = false;
 
@@ -807,7 +807,14 @@
       }
     }
 
-    updateValidationPanel(active ? findValidationError() : null);
+    updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
+  }
+
+  /** Top-most BC error dialog in this frame */
+  function findErrorDialog() {
+    const dialogs = Array.from(document.querySelectorAll('form.error-dialog'))
+      .filter((dialog) => dialog.getClientRects().length > 0);
+    return dialogs[dialogs.length - 1] || null;
   }
 
   /**
@@ -822,9 +829,14 @@
     return null;
   }
 
-  function updateValidationPanel(root) {
+  /**
+   * Floating panel at the bottom of the page for the current error — an
+   * error dialog (which also has the buttons inside) or a field validation
+   * error. Hidden with × until a different error appears.
+   */
+  function updateErrorPanel(root) {
     const info = root ? readErrorInfo(root) : null;
-    if (!info || info.message === dismissedValidation) {
+    if (!info || info.message === dismissedError) {
       if (errorPanel) errorPanel.remove();
       errorPanelRoot = null;
       return;
@@ -845,7 +857,7 @@
       close.title = 'Hide';
       close.textContent = '×';
       close.addEventListener('click', () => {
-        dismissedValidation = errorPanel.querySelector('.bc-sc-error-panel-message').textContent;
+        dismissedError = errorPanel.querySelector('.bc-sc-error-panel-message').textContent;
         errorPanel.remove();
         errorPanelRoot = null;
       });

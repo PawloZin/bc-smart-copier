@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.1] - 2026-10-28
+
+### Fixed
+- **Error panel missing for error dialogs**: The floating error panel with *Copy for AI agent* / *Copy for Jira* appeared only for field validation errors, so error dialogs (e.g. *Undo Receipt* on a Posted Purchase Receipt) showed the buttons only inside the dialog. The panel now appears for error dialogs too.
+- Test fixture: *Posted Purchase Receipt* with an error dialog.
+
+---
+
 ## [1.5.0] - 2026-10-24
 
 ### Added
