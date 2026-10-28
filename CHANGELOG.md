@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.6.0] - 2026-10-28
+
+### Added
+- **Editable AI agent instructions**: The task at the end of *Copy for AI agent* can be edited in the popup (*Error reports → Instructions for the AI agent*), with *Restore default instructions*. An empty field uses the default.
+- The default instructions have a new step: check the knowledge base thoroughly, including the application code it contains, and trace where the error is raised.
+
+---
+
 ## [1.5.3] - 2026-10-28
 
 ### Fixed

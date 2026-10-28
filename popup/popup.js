@@ -2,11 +2,19 @@
 const SHORTCUT_OPTIONS = ['shift', 'alt', 'ctrl', 'alt+shift', 'ctrl+shift', 'ctrl+alt'];
 const SHORTCUT_ACTIONS = ['cell', 'action', 'table'];
 const DEFAULT_SHORTCUTS = { cell: 'shift', action: 'alt+shift', table: 'alt' };
-// Must stay in sync with DEFAULT_ERROR_REPORT in content/content.js
+// Must stay in sync with DEFAULT_AGENT_INSTRUCTIONS / DEFAULT_ERROR_REPORT in content/content.js
+const DEFAULT_AGENT_INSTRUCTIONS =
+  'Help investigate this Microsoft Dynamics 365 Business Central error.\n' +
+  '1. Explain what the error means and its most likely cause, using the message, the technical details and the record data above.\n' +
+  '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.\n' +
+  '3. Check the knowledge base thoroughly, including the application code it contains (tables, pages, codeunits, triggers, procedures, event subscribers), and trace where this error is raised and why; base the answer on what you find there.\n' +
+  '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
+  'If something is missing, say what to check in Business Central.';
 const DEFAULT_ERROR_REPORT = {
   errorButtons: true,
   errorScreenshot: false,
-  environments: 'STG = STG\nQA = QA\nclient = PROD'
+  environments: 'STG = STG\nQA = QA\nclient = PROD',
+  agentInstructions: DEFAULT_AGENT_INSTRUCTIONS
 };
 const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
 
@@ -28,6 +36,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const errorScreenshot = document.getElementById('errorScreenshot');
   const screenshotWarning = document.getElementById('screenshotWarning');
   const environments = document.getElementById('environments');
+  const agentInstructions = document.getElementById('agentInstructions');
+  const resetInstructions = document.getElementById('resetInstructions');
 
   const isMac = (typeof navigator !== 'undefined') && (
     (navigator.userAgentData && navigator.userAgentData.platform === 'macOS') ||
@@ -75,16 +85,28 @@ document.addEventListener('DOMContentLoaded', () => {
       errorButtons.checked = res.errorButtons !== false;
       errorScreenshot.checked = res.errorScreenshot === true;
       environments.value = res.environments;
+      agentInstructions.value = res.agentInstructions || DEFAULT_AGENT_INSTRUCTIONS;
       if (errorScreenshot.checked) checkScreenshotPermission();
     });
 
     errorButtons.addEventListener('change', () => saveSettings({ errorButtons: errorButtons.checked }));
     errorScreenshot.addEventListener('change', onScreenshotChange);
 
-    let environmentsTimer = 0;
-    environments.addEventListener('input', () => {
-      clearTimeout(environmentsTimer);
-      environmentsTimer = setTimeout(() => saveSettings({ environments: environments.value }), 300);
+    saveTextOnInput(environments, 'environments');
+    saveTextOnInput(agentInstructions, 'agentInstructions');
+
+    resetInstructions.addEventListener('click', () => {
+      agentInstructions.value = DEFAULT_AGENT_INSTRUCTIONS;
+      saveSettings({ agentInstructions: DEFAULT_AGENT_INSTRUCTIONS });
+    });
+  }
+
+  // Text settings are saved shortly after typing stops
+  function saveTextOnInput(field, key) {
+    let timer = 0;
+    field.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => saveSettings({ [key]: field.value }), 300);
     });
   }
 
