@@ -819,10 +819,13 @@
 
   /**
    * Field validation error (red field with an error icon) in this frame —
-   * the field container is the error root.
+   * the field container is the error root. Empty mandatory fields carry the
+   * same marker class but a "required" icon instead of the error icon, so
+   * they are skipped.
    */
   function findValidationError() {
     for (const marker of document.querySelectorAll('.ms-nav-has-validation-error')) {
+      if (!marker.querySelector('.ms-nav-validationicon-error')) continue;
       if (marker.getClientRects().length === 0) continue;
       return marker.closest('.ms-nav-edit-control-container, td') || marker;
     }

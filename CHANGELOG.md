@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.3] - 2026-10-28
+
+### Fixed
+- **Error panel on required fields**: Empty mandatory fields (e.g. *Name*, *Customer Posting Group* on a new Customer Card) use the same marker as validation errors, so the error panel appeared with "The value for this field is required." Only fields with BC's error icon count as validation errors now.
+- Test fixture: *Customer Card* with empty required fields.
+
+---
+
 ## [1.5.2] - 2026-10-28
 
 ### Changed
