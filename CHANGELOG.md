@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.8.0] - 2026-11-02
+
+### Added
+- **Append mode for BC filters**: Double-tap the cell shortcut keys (default `Shift`) to switch the copy mode — each copied value is then added to the previous ones with `|` (e.g. `10000|20000|30000`), ready to paste into a BC filter. Double-tap again, press `Esc` or click × on the badge to switch back.
+  - The list starts with the value copied last by the extension (reading the clipboard would need an extra permission and does not work on `http://` BC servers).
+  - Values already in the list are skipped; values with filter characters are quoted (`'A&B Partners'`).
+  - A yellow toast announces every mode change and a yellow badge at the top shows the current list.
+  - Can be switched off in the popup (*Double-tap to append with |*).
+
+---
+
 ## [1.7.1] - 2026-10-28
 
 ### Fixed

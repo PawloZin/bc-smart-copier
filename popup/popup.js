@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const ctrlWarning = document.getElementById('ctrlWarning');
   const conflictError = document.getElementById('conflictError');
   const resetButton = document.getElementById('resetShortcuts');
+  const appendDoubleTap = document.getElementById('appendDoubleTap');
+  const appendHelp = document.getElementById('appendHelp');
   const errorButtons = document.getElementById('errorButtons');
   const errorScreenshot = document.getElementById('errorScreenshot');
   const screenshotWarning = document.getElementById('screenshotWarning');
@@ -70,10 +72,17 @@ document.addEventListener('DOMContentLoaded', () => {
   renderShortcuts(DEFAULT_SHORTCUTS);
 
   if (hasStorage) {
-    chrome.storage.local.get({ enabled: true, shortcuts: DEFAULT_SHORTCUTS }, (res) => {
+    chrome.storage.local.get({ enabled: true, shortcuts: DEFAULT_SHORTCUTS, appendDoubleTap: true }, (res) => {
       toggle.checked = res.enabled !== false;
       updateUI(toggle.checked);
       renderShortcuts(normalizeShortcuts(res.shortcuts));
+      appendDoubleTap.checked = res.appendDoubleTap !== false;
+      appendHelp.hidden = !appendDoubleTap.checked;
+    });
+
+    appendDoubleTap.addEventListener('change', () => {
+      appendHelp.hidden = !appendDoubleTap.checked;
+      saveSettings({ appendDoubleTap: appendDoubleTap.checked });
     });
 
     toggle.addEventListener('change', () => {

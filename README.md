@@ -27,6 +27,7 @@
 | Default shortcut | Action | Example output |
 |---|---|---|
 | `Shift` + **Click** | Copy cell value | `10000` or `[No.]` |
+| Double-tap `Shift`, then `Shift` + **Click** | Append mode — join values with `\|` | `10000\|20000\|30000` |
 | `Alt` + `Shift` + **Click** | Copy action path | `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}` |
 | Hold `Alt` + **Click** a table | Copy whole table (TSV) | Rows and columns ready to paste into Excel |
 
@@ -49,6 +50,13 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 2. Left-click any cell, field, or column header in Business Central.
 3. The clean text value is automatically sanitized and copied to your clipboard (Boolean fields are copied as `Yes` / `No`).
 4. The cell briefly highlights in green, and a Toast notification displays the copied value.
+
+### Append Mode — double-tap `Shift`
+1. Quickly press and release the cell shortcut keys twice (default **SHIFT**, nothing else in between). A yellow toast says the copy mode changed and a yellow badge appears at the top.
+2. Every cell copy now adds its value to the list with `|` — e.g. `10000|20000|30000` — ready to paste into a Business Central filter. The list starts with the value you copied last.
+3. Duplicates are skipped; values with filter characters (`& | < > = * @ ( ) '` or `..`) are put in single quotes.
+4. Double-tap again, press **Esc** or click **×** on the badge to switch back to normal copying (yellow toast again).
+5. The feature can be switched off in the popup (*Double-tap to append with |*).
 
 ### Copy Action Path — `Alt` + `Shift` + Left Click
 1. Hold **ALT + SHIFT** (or **⌥ OPTION + ⇧ SHIFT** on Mac).
