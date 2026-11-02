@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.0] - 2026-11-02
+
+### Changed
+- **Append mode starts from the clipboard**: Switching append mode on now reads the clipboard and continues that list (a previous `A|'B&C'|D` is split back into values), also after a normal `Ctrl + C`. On `https://` the async Clipboard API is used; on `http://` BC servers (no async Clipboard API outside secure contexts) a legacy paste into a hidden field is used, kept away from BC's own paste handlers. Multi-line content (e.g. a copied table) starts a new list; if the clipboard cannot be read, the value the extension copied last is used.
+
+### Security
+- New permission **`clipboardRead`** (Chrome asks to accept it after the update). The clipboard is read only when append mode is switched on, and the text is not stored or sent anywhere.
+
+---
+
 ## [1.8.0] - 2026-11-02
 
 ### Added
