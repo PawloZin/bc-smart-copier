@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2026-11-03
+
+### Fixed
+- **Error panel missing for a repeated error**: After an error was hidden with ×, the same error never showed the panel again, because the dismissal was remembered by message text. × now hides only the current occurrence; when the error disappears and comes back, the panel shows again.
+- **Reused error dialogs**: Errors were detected only when BC added new elements. If BC showed the same dialog again by changing its classes, no panel appeared. Class, style and `aria-hidden` changes are now watched too, and a dialog counts only while its view is shown.
+
+---
+
 ## [1.9.0] - 2026-11-02
 
 ### Changed

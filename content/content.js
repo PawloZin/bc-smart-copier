@@ -1060,11 +1060,17 @@
 
   let errorPanel = null;
   let errorPanelRoot = null;
-  let dismissedError = '';
+  let dismissedRoot = null; // error hidden with × — only until that error goes away
   let pendingShot = null; // { root, kind } — screenshot waiting for the second click
   let reportBusy = false;
 
-  new MutationObserver(scheduleErrorScan).observe(document.documentElement, { childList: true, subtree: true });
+  // Attributes too: BC may show a dialog again by changing its classes only
+  new MutationObserver(scheduleErrorScan).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style', 'aria-hidden']
+  });
 
   function scheduleErrorScan() {
     if (errorScanTimer) return;
@@ -1079,10 +1085,12 @@
     updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
   }
 
-  /** Top-most BC error dialog in this frame */
+  /** Top-most visible BC error dialog in this frame (a closed one may stay in the DOM) */
   function findErrorDialog() {
-    const dialogs = Array.from(document.querySelectorAll('form.error-dialog'))
-      .filter((dialog) => dialog.getClientRects().length > 0);
+    const dialogs = Array.from(document.querySelectorAll('form.error-dialog')).filter((dialog) => {
+      const view = dialog.closest('.spa-view');
+      return (!view || view.classList.contains('shown')) && dialog.getClientRects().length > 0;
+    });
     return dialogs[dialogs.length - 1] || null;
   }
 
@@ -1103,11 +1111,13 @@
 
   /**
    * Floating panel at the bottom of the page for the current error — an
-   * error dialog or a field validation error. Hidden with × until a different error appears.
+   * error dialog or a field validation error. × hides it for this occurrence
+   * only — the same error raised again shows the panel again.
    */
   function updateErrorPanel(root) {
-    const info = root ? readErrorInfo(root) : null;
-    if (!info || info.message === dismissedError) {
+    if (!root) dismissedRoot = null; // no error on screen — forget the dismissal
+    const info = root && root !== dismissedRoot ? readErrorInfo(root) : null;
+    if (!info) {
       hideErrorPanel();
       return;
     }
@@ -1127,7 +1137,7 @@
       close.title = 'Hide';
       close.textContent = '×';
       close.addEventListener('click', () => {
-        dismissedError = errorPanel.querySelector('.bc-sc-error-panel-message').textContent;
+        dismissedRoot = errorPanelRoot;
         hideErrorPanel();
       });
       header.append(title, close);
@@ -1155,7 +1165,10 @@
   function hideErrorPanel() {
     if (errorPanel) errorPanel.remove();
     errorPanelRoot = null;
-    document.documentElement.style.removeProperty('--bc-sc-panel-space');
+    // Only when set — a style change would trigger another scan
+    if (document.documentElement.style.getPropertyValue('--bc-sc-panel-space')) {
+      document.documentElement.style.removeProperty('--bc-sc-panel-space');
+    }
   }
 
   function buildErrorActions(getRoot) {
