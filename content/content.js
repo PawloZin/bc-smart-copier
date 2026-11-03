@@ -168,7 +168,7 @@
     }
 
     // A modifier held for a copy click is not a tap of append mode
-    tapSpoiled = true;
+    if (tapKeys.size > 0) tapSpoiled = true;
     lastTapTime = 0;
 
     // Synchronously block default BC / browser action
@@ -243,13 +243,13 @@
 
   let tapKeys = new Set(); // modifiers pressed in the current key gesture
   let tapStart = 0;
-  let tapSpoiled = false;  // another key or a click happened — not a tap
+  let tapSpoiled = false;  // another key or a click while the modifier was held — not a tap
   let lastTapTime = 0;
 
   window.addEventListener('keydown', onAppendKeyDown, true);
   window.addEventListener('keyup', onAppendKeyUp, true);
   window.addEventListener('pointerdown', () => {
-    tapSpoiled = true;
+    if (tapKeys.size > 0) tapSpoiled = true; // click while a modifier is held
     lastTapTime = 0;
   }, true);
   window.addEventListener('blur', () => {
@@ -261,7 +261,7 @@
   function onAppendKeyDown(e) {
     const key = MODIFIER_KEYS[e.key];
     if (!key) {
-      tapSpoiled = true;
+      if (tapKeys.size > 0) tapSpoiled = true; // e.g. Shift + A while typing
       lastTapTime = 0;
       if (e.key === 'Escape' && appendMode) exitAppendMode(true);
       return;
