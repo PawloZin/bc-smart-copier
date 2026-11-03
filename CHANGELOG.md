@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.10.0] - 2026-11-03
+
+### Changed
+- **Append mode starts with an empty clipboard**: Switching append mode on clears the clipboard and starts a new, empty list, instead of continuing from the clipboard content (1.9.0). Switching it off keeps the list in the clipboard, ready to paste.
+
+### Removed
+- The `clipboardRead` permission, no longer needed.
+
+---
+
 ## [1.9.2] - 2026-11-03
 
 ### Fixed

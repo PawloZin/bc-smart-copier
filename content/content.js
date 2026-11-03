@@ -214,7 +214,6 @@
 
     copyToClipboard(extractedText).then((success) => {
       if (success) {
-        lastCopiedValues = [extractedText];
         highlightElement(cellElement);
         showToast('Copied to clipboard', extractedText, false);
       } else {
@@ -227,8 +226,8 @@
   // APPEND MODE  (double-tap the cell shortcut keys, default Shift)
   // ---------------------------------------------------------------------------
   // Each cell copy adds its value to the previous ones, joined with "|" — a BC
-  // "or" filter such as 10000|20000|30000. The list starts with the clipboard
-  // content (clipboardRead permission). A badge shows the current list;
+  // "or" filter such as 10000|20000|30000. Switching the mode on clears the
+  // clipboard and starts an empty list. A badge shows the current list;
   // double-tap again, press Esc or click × to finish.
 
   const APPEND_SEPARATOR = '|';
@@ -236,9 +235,7 @@
   const MODIFIER_KEYS = { Shift: 'shift', Alt: 'alt', Control: 'ctrl', Meta: 'ctrl' };
 
   let appendMode = false;
-  let appendSession = 0; // ignores a clipboard read that finishes after the mode changed
   let appendValues = [];
-  let lastCopiedValues = []; // what the cell shortcut put into the clipboard last
   let appendBadge = null;
 
   let tapKeys = new Set(); // modifiers pressed in the current key gesture
@@ -304,103 +301,38 @@
   }
 
   /**
-   * The list starts with what is in the clipboard (a previous "A|B" list is
-   * split back into values). Multi-line content such as a copied table is not
-   * a filter, so the list starts empty then. When the clipboard cannot be read
-   * at all, the value the extension copied last is used.
+   * A new list every time: the clipboard is cleared so nothing copied before
+   * ends up in the filter.
    */
-  async function enterAppendMode() {
+  function enterAppendMode() {
     appendMode = true;
     appendValues = [];
-    const session = ++appendSession;
-
-    const clipboard = await readClipboardText();
-    if (!appendMode || session !== appendSession) return; // switched off meanwhile
-
-    let note = '';
-    if (clipboard === null) {
-      appendValues = [...lastCopiedValues];
-    } else if (/[\r\n\t]/.test(clipboard.trim())) {
-      note = 'The clipboard has several lines, starting a new list. ';
-    } else {
-      appendValues = parseFilterValues(clipboard);
-    }
-
+    clearClipboard();
     updateAppendBadge();
-    showToast('Copy mode: append with |', note + (appendValues.length
-      ? `Next values are added to ${joinFilterValues(appendValues)}. Double-tap again to switch back.`
-      : `Copied values are joined with ${APPEND_SEPARATOR}. Double-tap again to switch back.`), 'warning');
+    showToast('Copy mode: append with |',
+      `Clipboard cleared. Copied values are joined with ${APPEND_SEPARATOR}. Double-tap again to switch back.`, 'warning');
   }
 
   /**
-   * Clipboard text, or null when it cannot be read. https:// pages use the
-   * async Clipboard API; http:// pages do not have it (not a secure context),
-   * so a paste into a hidden textarea is used — allowed by the clipboardRead
-   * permission. The paste event is kept away from BC's own paste handlers.
+   * Empties the clipboard. On http:// BC servers there is no async Clipboard
+   * API, and execCommand('copy') with an empty selection would leave the old
+   * content, so an empty text is set in a 'copy' event instead.
    */
-  async function readClipboardText() {
+  async function clearClipboard() {
     try {
-      if (navigator.clipboard && navigator.clipboard.readText) return await navigator.clipboard.readText();
-    } catch (err) {
-      // Denied or document not focused — try the legacy way
-    }
-
-    if (!document.body) return null;
-    const previousFocus = document.activeElement;
-    const textArea = document.createElement('textarea');
-    textArea.style.position = 'fixed';
-    textArea.style.left = '-9999px';
-    textArea.style.top = '-9999px';
-    const shield = (e) => {
-      if (e.target === textArea) e.stopImmediatePropagation();
-    };
-    window.addEventListener('paste', shield, true);
-    try {
-      document.body.appendChild(textArea);
-      textArea.focus({ preventScroll: true });
-      return document.execCommand('paste') ? textArea.value : null;
-    } catch (err) {
-      return null;
-    } finally {
-      window.removeEventListener('paste', shield, true);
-      textArea.remove();
-      if (previousFocus && typeof previousFocus.focus === 'function') {
-        previousFocus.focus({ preventScroll: true });
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText('');
+        return;
       }
+    } catch (err) {
+      // Not focused or denied — try the copy event
     }
-  }
-
-  /** Splits "A|'B&C'|D" back into values — the reverse of joinFilterValues */
-  function parseFilterValues(text) {
-    const values = [];
-    let current = '';
-    let quoted = false;
-    for (let i = 0; i < text.length; i++) {
-      const ch = text[i];
-      if (quoted && ch === "'") {
-        if (text[i + 1] === "'") {
-          current += "'";
-          i++;
-        } else {
-          quoted = false;
-        }
-      } else if (!quoted && ch === "'" && current.trim() === '') {
-        quoted = true;
-      } else if (!quoted && ch === APPEND_SEPARATOR) {
-        values.push(current.trim());
-        current = '';
-      } else {
-        current += ch;
-      }
-    }
-    values.push(current.trim());
-    return [...new Set(values.filter(Boolean))];
+    copyWithCopyEvent({ 'text/plain': '' });
   }
 
   function exitAppendMode(notify) {
     if (!appendMode) return;
     appendMode = false;
-    appendSession++;
     if (appendBadge) appendBadge.remove();
     if (notify) {
       showToast('Copy mode: normal', appendValues.length
@@ -424,7 +356,6 @@
         return;
       }
       appendValues = next;
-      lastCopiedValues = next;
       highlightElement(cellElement);
       updateAppendBadge();
       showToast(`Added (${next.length})`, text, false);

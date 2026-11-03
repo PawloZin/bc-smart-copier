@@ -53,7 +53,7 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 
 ### Append Mode — double-tap `Shift`
 1. Quickly press and release the cell shortcut keys twice (default **SHIFT**, nothing else in between). A yellow toast says the copy mode changed and a yellow badge appears at the top.
-2. Every cell copy now adds its value to the list with `|` — e.g. `10000|20000|30000` — ready to paste into a Business Central filter. The list starts with what is in the clipboard (works on `https://` and `http://` BC servers; needs the `clipboardRead` permission). A multi-line clipboard (e.g. a copied table) starts a new list.
+2. Every cell copy now adds its value to the list with `|` — e.g. `10000|20000|30000` — ready to paste into a Business Central filter. Switching the mode on clears the clipboard, so every list starts empty.
 3. Duplicates are skipped; values with filter characters (`& | < > = * @ ( ) '` or `..`) are put in single quotes.
 4. Double-tap again, press **Esc** or click **×** on the badge to switch back to normal copying (yellow toast again).
 5. The feature can be switched off in the popup (*Double-tap to append with |*).
