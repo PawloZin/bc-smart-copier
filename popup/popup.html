@@ -14,7 +14,7 @@
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version" id="version">v1.7.1</span>
+    <span class="version" id="version">v1.9.1</span>
   </div>
 
   <div class="card status-card">
@@ -37,6 +37,11 @@
       <p class="instruction-desc">
         Left-click any cell or field to copy its plain text value.<br>
         <em>Example: <code>10000</code> or <code>[No.]</code></em>
+      </p>
+      <p class="instruction-desc" id="appendHelp">
+        <b>Double-tap</b> the same keys to switch <b>append mode</b>: each copied value is added to the
+        clipboard content with <code>|</code>, ready for a BC filter.<br>
+        <em>Example: <code>10000|20000|30000</code> — Esc or double-tap again to finish.</em>
       </p>
     </div>
 
@@ -81,6 +86,11 @@
     <label class="setting-row" for="shortcutTable">
       <span class="setting-label">Copy whole table</span>
       <select id="shortcutTable"></select>
+    </label>
+
+    <label class="setting-row" for="appendDoubleTap">
+      <span class="setting-label">Double-tap to append with |</span>
+      <input type="checkbox" id="appendDoubleTap" checked>
     </label>
 
     <p class="setting-message setting-warning" id="ctrlWarning" hidden></p>

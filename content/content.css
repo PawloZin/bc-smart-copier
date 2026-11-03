@@ -76,6 +76,16 @@
   background: #c0392b;
 }
 
+/* Notice state — yellow, used when the copy mode changes */
+.bc-toast-item.bc-toast-warning {
+  border-left-color: #f2c500;
+}
+
+.bc-toast-item.bc-toast-warning .bc-toast-icon {
+  background: #f2c500;
+  color: #3b2f00;
+}
+
 .bc-toast-item .bc-toast-body {
   display: flex;
   flex-direction: column;
@@ -228,5 +238,61 @@
 /* Hidden while a screenshot is taken */
 .bc-sc-capturing .bc-sc-error-ui,
 .bc-sc-capturing #bc-smart-copier-toast-container {
+  visibility: hidden !important;
+}
+
+/* Append mode badge — yellow, top center while copied values are being joined */
+#bc-smart-copier-append-badge {
+  position: fixed;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2147483645;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
+  padding: 7px 8px 7px 14px;
+  background: #f2c500;
+  color: #3b2f00;
+  border-radius: 999px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+}
+
+#bc-smart-copier-append-badge .bc-sc-append-label {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.85;
+}
+
+#bc-smart-copier-append-badge .bc-sc-append-values {
+  min-width: 0;
+  font-family: monospace;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#bc-smart-copier-append-badge .bc-sc-append-close {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  font-size: 16px;
+  line-height: 1;
+  color: #3b2f00;
+  background: rgba(0, 0, 0, 0.12);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.bc-sc-capturing #bc-smart-copier-append-badge {
   visibility: hidden !important;
 }

@@ -1,11 +1,12 @@
 {
   "manifest_version": 3,
   "name": "BC Smart Copier - Business Central Cell Copier",
-  "version": "1.7.1",
+  "version": "1.9.1",
   "description": "Quickly copy cell and field values from Microsoft Dynamics 365 Business Central with a configurable modifier + Click (Shift + Click by default), and copy BC errors for an AI agent or Jira.",
   "permissions": [
     "storage",
-    "clipboardWrite"
+    "clipboardWrite",
+    "clipboardRead"
   ],
   "optional_host_permissions": [
     "<all_urls>"

@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.1] - 2026-11-03
+
+### Fixed
+- **Error panel missing for a repeated error**: After an error was hidden with ×, the same error never showed the panel again, because the dismissal was remembered by message text. × now hides only the current occurrence; when the error disappears and comes back, the panel shows again.
+- **Reused error dialogs**: Errors were detected only when BC added new elements. If BC showed the same dialog again by changing its classes, no panel appeared. Class, style and `aria-hidden` changes are now watched too, and a dialog counts only while its view is shown.
+
+---
+
+## [1.9.0] - 2026-11-02
+
+### Changed
+- **Append mode starts from the clipboard**: Switching append mode on now reads the clipboard and continues that list (a previous `A|'B&C'|D` is split back into values), also after a normal `Ctrl + C`. On `https://` the async Clipboard API is used; on `http://` BC servers (no async Clipboard API outside secure contexts) a legacy paste into a hidden field is used, kept away from BC's own paste handlers. Multi-line content (e.g. a copied table) starts a new list; if the clipboard cannot be read, the value the extension copied last is used.
+
+### Security
+- New permission **`clipboardRead`** (Chrome asks to accept it after the update). The clipboard is read only when append mode is switched on, and the text is not stored or sent anywhere.
+
+---
+
+## [1.8.0] - 2026-11-02
+
+### Added
+- **Append mode for BC filters**: Double-tap the cell shortcut keys (default `Shift`) to switch the copy mode — each copied value is then added to the previous ones with `|` (e.g. `10000|20000|30000`), ready to paste into a BC filter. Double-tap again, press `Esc` or click × on the badge to switch back.
+  - The list starts with the value copied last by the extension (reading the clipboard would need an extra permission and does not work on `http://` BC servers).
+  - Values already in the list are skipped; values with filter characters are quoted (`'A&B Partners'`).
+  - A yellow toast announces every mode change and a yellow badge at the top shows the current list.
+  - Can be switched off in the popup (*Double-tap to append with |*).
+
+---
+
 ## [1.7.1] - 2026-10-28
 
 ### Fixed

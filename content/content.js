@@ -8,6 +8,9 @@
  *   Alt + Shift + Left Click  → Copy action path (Page › Tab › Action)
  *   Alt (hold) + Left Click   → Copy whole table as TSV (Table Copier)
  *
+ * Double-tapping the cell shortcut keys (default Shift) switches append
+ * mode: copied values are joined with "|" — ready for a BC filter.
+ *
  * On BC error dialogs and field validation errors it also shows
  * "Copy for AI agent" / "Copy for Jira" buttons (Error Report).
  *
@@ -43,14 +46,16 @@
 
   let isEnabled = true;
   let shortcuts = { ...DEFAULT_SHORTCUTS };
+  let appendDoubleTap = true;
   const errorReport = { ...DEFAULT_ERROR_REPORT };
   let errorScanTimer = 0; // declared before the storage callbacks that schedule a scan
 
   // Retrieve initial extension state from chrome.storage
   if (typeof chrome !== 'undefined' && chrome.storage && chrome.storage.local) {
-    chrome.storage.local.get({ enabled: true, shortcuts: DEFAULT_SHORTCUTS, ...DEFAULT_ERROR_REPORT }, (res) => {
+    chrome.storage.local.get({ enabled: true, shortcuts: DEFAULT_SHORTCUTS, appendDoubleTap: true, ...DEFAULT_ERROR_REPORT }, (res) => {
       isEnabled = res.enabled !== false;
       shortcuts = normalizeShortcuts(res.shortcuts);
+      appendDoubleTap = res.appendDoubleTap !== false;
       for (const key of Object.keys(DEFAULT_ERROR_REPORT)) errorReport[key] = res[key];
       scheduleErrorScan();
     });
@@ -63,6 +68,10 @@
       if (changes.shortcuts !== undefined) {
         shortcuts = normalizeShortcuts(changes.shortcuts.newValue);
       }
+      if (changes.appendDoubleTap !== undefined) {
+        appendDoubleTap = changes.appendDoubleTap.newValue !== false;
+      }
+      if (!isEnabled || !appendDoubleTap) exitAppendMode(false);
       for (const key of Object.keys(DEFAULT_ERROR_REPORT)) {
         if (changes[key] !== undefined) errorReport[key] = changes[key].newValue;
       }
@@ -158,6 +167,10 @@
       return;
     }
 
+    // A modifier held for a copy click is not a tap of append mode
+    tapSpoiled = true;
+    lastTapTime = 0;
+
     // Synchronously block default BC / browser action
     e.preventDefault();
     e.stopPropagation();
@@ -194,14 +207,272 @@
       return;
     }
 
+    if (appendMode) {
+      appendCellValue(extractedText, cellElement);
+      return;
+    }
+
     copyToClipboard(extractedText).then((success) => {
       if (success) {
+        lastCopiedValues = [extractedText];
         highlightElement(cellElement);
         showToast('Copied to clipboard', extractedText, false);
       } else {
         showToast('Copy error', 'Failed to access clipboard.', true);
       }
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // APPEND MODE  (double-tap the cell shortcut keys, default Shift)
+  // ---------------------------------------------------------------------------
+  // Each cell copy adds its value to the previous ones, joined with "|" — a BC
+  // "or" filter such as 10000|20000|30000. The list starts with the clipboard
+  // content (clipboardRead permission). A badge shows the current list;
+  // double-tap again, press Esc or click × to finish.
+
+  const APPEND_SEPARATOR = '|';
+  const DOUBLE_TAP_WINDOW = 400; // max ms between the two taps, and for one tap
+  const MODIFIER_KEYS = { Shift: 'shift', Alt: 'alt', Control: 'ctrl', Meta: 'ctrl' };
+
+  let appendMode = false;
+  let appendSession = 0; // ignores a clipboard read that finishes after the mode changed
+  let appendValues = [];
+  let lastCopiedValues = []; // what the cell shortcut put into the clipboard last
+  let appendBadge = null;
+
+  let tapKeys = new Set(); // modifiers pressed in the current key gesture
+  let tapStart = 0;
+  let tapSpoiled = false;  // another key or a click happened — not a tap
+  let lastTapTime = 0;
+
+  window.addEventListener('keydown', onAppendKeyDown, true);
+  window.addEventListener('keyup', onAppendKeyUp, true);
+  window.addEventListener('pointerdown', () => {
+    tapSpoiled = true;
+    lastTapTime = 0;
+  }, true);
+  window.addEventListener('blur', () => {
+    tapKeys = new Set();
+    tapSpoiled = false;
+    lastTapTime = 0;
+  });
+
+  function onAppendKeyDown(e) {
+    const key = MODIFIER_KEYS[e.key];
+    if (!key) {
+      tapSpoiled = true;
+      lastTapTime = 0;
+      if (e.key === 'Escape' && appendMode) exitAppendMode(true);
+      return;
+    }
+    if (e.repeat) return;
+    if (tapKeys.size === 0) tapStart = Date.now();
+    tapKeys.add(key);
+  }
+
+  /**
+   * A tap is pressing and releasing exactly the cell shortcut keys, quickly,
+   * with nothing else in between. Two taps in a row toggle append mode.
+   */
+  function onAppendKeyUp(e) {
+    if (!MODIFIER_KEYS[e.key]) return;
+    if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey) return; // still holding a key
+
+    const now = Date.now();
+    const isTap = !tapSpoiled && tapKeys.size > 0 && now - tapStart <= DOUBLE_TAP_WINDOW &&
+                  sameKeys(tapKeys, shortcuts.cell);
+    tapKeys = new Set();
+    tapSpoiled = false;
+
+    if (!isTap || !isEnabled || !appendDoubleTap) {
+      lastTapTime = 0;
+      return;
+    }
+    if (now - lastTapTime <= DOUBLE_TAP_WINDOW) {
+      lastTapTime = 0;
+      if (appendMode) exitAppendMode(true);
+      else enterAppendMode();
+    } else {
+      lastTapTime = now;
+    }
+  }
+
+  function sameKeys(pressed, shortcut) {
+    const keys = shortcut.split('+');
+    return pressed.size === keys.length && keys.every((key) => pressed.has(key));
+  }
+
+  /**
+   * The list starts with what is in the clipboard (a previous "A|B" list is
+   * split back into values). Multi-line content such as a copied table is not
+   * a filter, so the list starts empty then. When the clipboard cannot be read
+   * at all, the value the extension copied last is used.
+   */
+  async function enterAppendMode() {
+    appendMode = true;
+    appendValues = [];
+    const session = ++appendSession;
+
+    const clipboard = await readClipboardText();
+    if (!appendMode || session !== appendSession) return; // switched off meanwhile
+
+    let note = '';
+    if (clipboard === null) {
+      appendValues = [...lastCopiedValues];
+    } else if (/[\r\n\t]/.test(clipboard.trim())) {
+      note = 'The clipboard has several lines, starting a new list. ';
+    } else {
+      appendValues = parseFilterValues(clipboard);
+    }
+
+    updateAppendBadge();
+    showToast('Copy mode: append with |', note + (appendValues.length
+      ? `Next values are added to ${joinFilterValues(appendValues)}. Double-tap again to switch back.`
+      : `Copied values are joined with ${APPEND_SEPARATOR}. Double-tap again to switch back.`), 'warning');
+  }
+
+  /**
+   * Clipboard text, or null when it cannot be read. https:// pages use the
+   * async Clipboard API; http:// pages do not have it (not a secure context),
+   * so a paste into a hidden textarea is used — allowed by the clipboardRead
+   * permission. The paste event is kept away from BC's own paste handlers.
+   */
+  async function readClipboardText() {
+    try {
+      if (navigator.clipboard && navigator.clipboard.readText) return await navigator.clipboard.readText();
+    } catch (err) {
+      // Denied or document not focused — try the legacy way
+    }
+
+    if (!document.body) return null;
+    const previousFocus = document.activeElement;
+    const textArea = document.createElement('textarea');
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-9999px';
+    textArea.style.top = '-9999px';
+    const shield = (e) => {
+      if (e.target === textArea) e.stopImmediatePropagation();
+    };
+    window.addEventListener('paste', shield, true);
+    try {
+      document.body.appendChild(textArea);
+      textArea.focus({ preventScroll: true });
+      return document.execCommand('paste') ? textArea.value : null;
+    } catch (err) {
+      return null;
+    } finally {
+      window.removeEventListener('paste', shield, true);
+      textArea.remove();
+      if (previousFocus && typeof previousFocus.focus === 'function') {
+        previousFocus.focus({ preventScroll: true });
+      }
+    }
+  }
+
+  /** Splits "A|'B&C'|D" back into values — the reverse of joinFilterValues */
+  function parseFilterValues(text) {
+    const values = [];
+    let current = '';
+    let quoted = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (quoted && ch === "'") {
+        if (text[i + 1] === "'") {
+          current += "'";
+          i++;
+        } else {
+          quoted = false;
+        }
+      } else if (!quoted && ch === "'" && current.trim() === '') {
+        quoted = true;
+      } else if (!quoted && ch === APPEND_SEPARATOR) {
+        values.push(current.trim());
+        current = '';
+      } else {
+        current += ch;
+      }
+    }
+    values.push(current.trim());
+    return [...new Set(values.filter(Boolean))];
+  }
+
+  function exitAppendMode(notify) {
+    if (!appendMode) return;
+    appendMode = false;
+    appendSession++;
+    if (appendBadge) appendBadge.remove();
+    if (notify) {
+      showToast('Copy mode: normal', appendValues.length
+        ? `Each copy replaces the clipboard again. Last list: ${joinFilterValues(appendValues)}`
+        : 'Each copy replaces the clipboard again.', 'warning');
+    }
+  }
+
+  function appendCellValue(value, cellElement) {
+    if (appendValues.includes(value)) {
+      highlightElement(cellElement);
+      showToast('Already in the list', joinFilterValues(appendValues), false);
+      return;
+    }
+
+    const next = [...appendValues, value];
+    const text = joinFilterValues(next);
+    copyToClipboard(text).then((success) => {
+      if (!success) {
+        showToast('Copy error', 'Failed to access clipboard.', true);
+        return;
+      }
+      appendValues = next;
+      lastCopiedValues = next;
+      highlightElement(cellElement);
+      updateAppendBadge();
+      showToast(`Added (${next.length})`, text, false);
+    });
+  }
+
+  /**
+   * Values joined for a BC filter. A value with filter characters is put in
+   * single quotes so BC matches it literally ('A&B', 'O''Brien').
+   */
+  function joinFilterValues(values) {
+    return values.map((value) => (/[|&<>=*@()']|\.\./.test(value)
+      ? `'${value.replace(/'/g, "''")}'`
+      : value)).join(APPEND_SEPARATOR);
+  }
+
+  function updateAppendBadge() {
+    if (!appendMode) return;
+    if (!appendBadge) {
+      appendBadge = document.createElement('div');
+      appendBadge.id = 'bc-smart-copier-append-badge';
+
+      const label = document.createElement('span');
+      label.className = 'bc-sc-append-label';
+      label.textContent = 'Append mode';
+
+      const values = document.createElement('span');
+      values.className = 'bc-sc-append-values';
+
+      const close = document.createElement('button');
+      close.type = 'button';
+      close.className = 'bc-sc-append-close';
+      close.title = 'Finish (Esc or double-tap)';
+      close.textContent = '×';
+      close.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        exitAppendMode(true);
+      });
+
+      appendBadge.append(label, values, close);
+    }
+
+    const valuesEl = appendBadge.querySelector('.bc-sc-append-values');
+    const text = appendValues.length ? joinFilterValues(appendValues) : `Copy cells to join them with ${APPEND_SEPARATOR}`;
+    valuesEl.textContent = text;
+    valuesEl.title = text;
+    if (!appendBadge.isConnected) (document.body || document.documentElement).appendChild(appendBadge);
   }
 
   /**
@@ -789,11 +1060,17 @@
 
   let errorPanel = null;
   let errorPanelRoot = null;
-  let dismissedError = '';
+  let dismissedRoot = null; // error hidden with × — only until that error goes away
   let pendingShot = null; // { root, kind } — screenshot waiting for the second click
   let reportBusy = false;
 
-  new MutationObserver(scheduleErrorScan).observe(document.documentElement, { childList: true, subtree: true });
+  // Attributes too: BC may show a dialog again by changing its classes only
+  new MutationObserver(scheduleErrorScan).observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ['class', 'style', 'aria-hidden']
+  });
 
   function scheduleErrorScan() {
     if (errorScanTimer) return;
@@ -808,10 +1085,12 @@
     updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
   }
 
-  /** Top-most BC error dialog in this frame */
+  /** Top-most visible BC error dialog in this frame (a closed one may stay in the DOM) */
   function findErrorDialog() {
-    const dialogs = Array.from(document.querySelectorAll('form.error-dialog'))
-      .filter((dialog) => dialog.getClientRects().length > 0);
+    const dialogs = Array.from(document.querySelectorAll('form.error-dialog')).filter((dialog) => {
+      const view = dialog.closest('.spa-view');
+      return (!view || view.classList.contains('shown')) && dialog.getClientRects().length > 0;
+    });
     return dialogs[dialogs.length - 1] || null;
   }
 
@@ -832,11 +1111,13 @@
 
   /**
    * Floating panel at the bottom of the page for the current error — an
-   * error dialog or a field validation error. Hidden with × until a different error appears.
+   * error dialog or a field validation error. × hides it for this occurrence
+   * only — the same error raised again shows the panel again.
    */
   function updateErrorPanel(root) {
-    const info = root ? readErrorInfo(root) : null;
-    if (!info || info.message === dismissedError) {
+    if (!root) dismissedRoot = null; // no error on screen — forget the dismissal
+    const info = root && root !== dismissedRoot ? readErrorInfo(root) : null;
+    if (!info) {
       hideErrorPanel();
       return;
     }
@@ -856,7 +1137,7 @@
       close.title = 'Hide';
       close.textContent = '×';
       close.addEventListener('click', () => {
-        dismissedError = errorPanel.querySelector('.bc-sc-error-panel-message').textContent;
+        dismissedRoot = errorPanelRoot;
         hideErrorPanel();
       });
       header.append(title, close);
@@ -884,7 +1165,10 @@
   function hideErrorPanel() {
     if (errorPanel) errorPanel.remove();
     errorPanelRoot = null;
-    document.documentElement.style.removeProperty('--bc-sc-panel-space');
+    // Only when set — a style change would trigger another scan
+    if (document.documentElement.style.getPropertyValue('--bc-sc-panel-space')) {
+      document.documentElement.style.removeProperty('--bc-sc-panel-space');
+    }
   }
 
   function buildErrorActions(getRoot) {
@@ -1507,9 +1791,11 @@
    *
    * @param {string} title — Toast header label
    * @param {string} value — Main content text
-   * @param {boolean} isError — When true, applies error styling (red icon & border)
+   * @param {boolean|'warning'} isError — true: error styling (red icon & border);
+   *   'warning': notice styling (yellow), e.g. a change of the copy mode
    */
   function showToast(title, value, isError) {
+    const isWarning = isError === 'warning';
     let container = document.getElementById('bc-smart-copier-toast-container');
 
     if (!container) {
@@ -1520,11 +1806,11 @@
 
     // Build toast item DOM programmatically (XSS-safe)
     const toast = document.createElement('div');
-    toast.className = 'bc-toast-item' + (isError ? ' bc-toast-error' : '');
+    toast.className = 'bc-toast-item' + (isWarning ? ' bc-toast-warning' : isError ? ' bc-toast-error' : '');
 
     const icon = document.createElement('div');
     icon.className = 'bc-toast-icon';
-    icon.textContent = isError ? '!' : '✓';
+    icon.textContent = isWarning ? '⇄' : isError ? '!' : '✓';
 
     const body = document.createElement('div');
     body.className = 'bc-toast-body';
