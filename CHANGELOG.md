@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.9.2] - 2026-11-03
+
+### Fixed
+- **Double-tap Shift did not switch append mode**: A mouse click or a typed character before the double-tap cancelled the first tap, so after clicking in Business Central the mode never switched on. Only a click or key pressed *while* the modifier is held cancels a tap now.
+
+---
+
 ## [1.9.1] - 2026-11-03
 
 ### Fixed
