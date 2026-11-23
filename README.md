@@ -5,7 +5,7 @@
 <h1 align="center">BC Smart Copier</h1>
 
 <p align="center">
-  A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b>.
+  A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b> and <b>Microsoft Dynamics NAV 2016</b> (Web Client).
 </p>
 
 <p align="center">

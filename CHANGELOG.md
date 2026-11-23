@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.11.0] - 2026-11-23
+
+### Added
+- **Microsoft Dynamics NAV 2016 (Web Client)**: Cell copy, Table Copier and action path work in NAV 2016 too.
+  - Action path: the page name comes from the NAV window title (`Edit - Customer Card` → `Customer Card`, the record part of `Edit - Sales Order - 101005 ∙ …` is dropped), and the ribbon tab of the clicked button (Home, Actions, Navigate, Report, …) is detected — e.g. `open page [Customer Card] and go to [Navigate] tab and click {Dimensions}`.
+  - Test fixtures: NAV 2016 *Customer Card* and *Sales Order*.
+
+### Fixed
+- **Table Copier in edit mode**: Cells holding a form control (edit-mode grids in NAV and BC) copied an empty value or, for option fields, every option at once. The control's value and the selected option are copied now; the row selection checkbox is skipped, and an empty header cell uses its column caption (`abbr`) — NAV keeps the captions in a separate header table.
+
+---
+
 ## [1.10.0] - 2026-11-03
 
 ### Changed

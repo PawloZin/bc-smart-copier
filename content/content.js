@@ -1,7 +1,8 @@
 /**
  * BC Smart Copier - Content Script
  * Captures modifier + Left Click on cells in Microsoft Dynamics 365 Business Central
- * and copies clean text content to clipboard.
+ * and Microsoft Dynamics NAV 2016 (Web Client) and copies clean text content to
+ * clipboard.
  *
  * Default shortcuts (configurable in the popup):
  *   Shift + Left Click        → Copy cell value
@@ -567,6 +568,12 @@
   function extractPageName(target) {
     const scope = findPageScope(target);
 
+    // 0. Dynamics NAV 2016: "Edit - Customer Card" style window title
+    if (isNavClient()) {
+      const navName = extractNavPageName(scope);
+      if (navName) return navName;
+    }
+
     // 1. Visible page header title (most accurate display caption for both Card & List pages)
     const titleEl = scope.querySelector(
       '.synopsis-trigger, [id$="_subtitle"] span, .menu-bar__page-title [role="heading"]'
@@ -610,6 +617,37 @@
   }
 
   /**
+   * Dynamics NAV 2016 Web Client: SharePoint-style ribbon, ASP.NET form,
+   * "/WebClient/" in the address. Field, grid and FastTab markup is the same
+   * as in Business Central; page titles, ribbon tabs and errors differ.
+   */
+  function isNavClient() {
+    return /\/WebClient\//i.test(location.pathname) || !!document.querySelector('.ms-cui-ribbon');
+  }
+
+  /**
+   * NAV page caption from the window title of the page, which reads
+   * "<mode> - <page>" or "<mode> - <page> - <record>", e.g.
+   * "Edit - Sales Order - 101005 ∙ John Haddock Insurance Co.". The mode
+   * (Edit, View, New, Delete — localized) is one word.
+   */
+  function extractNavPageName(scope) {
+    const titleEl = scope.querySelector('.native-container-title');
+    let title = titleEl ? sanitizeText(titleEl.textContent) : '';
+    if (!title) return '';
+
+    const record = extractNavRecordCaption(scope);
+    if (record && title.endsWith(' - ' + record)) title = title.slice(0, -(record.length + 3));
+    return title.replace(/^[^\s-]+ - /, '').trim();
+  }
+
+  /** NAV record caption shown in the page header, e.g. "10000 ∙ Adatum Corporation" */
+  function extractNavRecordCaption(scope) {
+    const el = scope.querySelector('.pagetitle-control');
+    return el ? sanitizeText(el.textContent) : '';
+  }
+
+  /**
    * Returns the BC page view (.spa-view) that owns the clicked element.
    * Popup menus are rendered in a portal outside the view, so for them the
    * top-most shown view is used (BC marks every lower view "spa-not-top-most").
@@ -633,6 +671,9 @@
    *   - aria-expanded="true"   when their dropdown is currently shown
    */
   function extractActiveTab(target) {
+    const navTab = extractNavRibbonTab(target);
+    if (navTab) return navTab;
+
     const bcTabSelector = '[data-top-level-action="true"][aria-haspopup="true"][aria-expanded="true"]';
 
     const inPopup = !!target.closest('[role="menu"]');
@@ -670,6 +711,20 @@
     }
 
     return '';
+  }
+
+  /**
+   * NAV ribbon tab of a ribbon button: its tab panel is labelled by the tab.
+   * Buttons in a flyout menu (outside the panel) use the selected tab.
+   */
+  function extractNavRibbonTab(target) {
+    const panel = target.closest('.ms-cui-tabBody[aria-labelledby]');
+    let tab = panel ? document.getElementById(panel.getAttribute('aria-labelledby')) : null;
+    if (!tab && target.closest('.ms-cui-menu')) {
+      const scope = findPageScope(target);
+      tab = scope.querySelector('li.ms-cui-tt-s') || document.querySelector('li.ms-cui-tt-s');
+    }
+    return tab ? sanitizeText(tab.textContent) : '';
   }
 
   /**
@@ -937,7 +992,7 @@
         const colSpan = Math.max(1, cell.colSpan || 1);
         const rowSpan = Math.max(1, cell.rowSpan || 1);
         for (let i = 0; i < colSpan; i++) {
-          values[col + i] = i === 0 ? normalizeTableCell(cell.innerText || cell.textContent || '') : '';
+          values[col + i] = i === 0 ? readTableCellText(cell) : '';
           if (rowSpan > 1) pending[col + i] = rowSpan - 1;
         }
         col += colSpan;
@@ -952,6 +1007,36 @@
     const width = grid.reduce((max, row) => Math.max(max, row.length), 0);
     for (const row of grid) while (row.length < width) row.push('');
     return grid;
+  }
+
+  /**
+   * Text of a table cell. Cells in edit mode hold a form control (its value
+   * is not part of the text); a select gives its selected option. NAV grids
+   * keep the column captions in a separate header table, so an empty header
+   * cell falls back to its abbr attribute.
+   */
+  function readTableCellText(cell) {
+    const control = cell.querySelector(CELL_CONTROL_SELECTOR);
+    if (control) return normalizeTableCell(readControlDisplayValue(control));
+    const text = normalizeTableCell(cell.innerText || cell.textContent || '');
+    if (!text && cell.tagName === 'TH') return normalizeTableCell(cell.getAttribute('abbr') || '');
+    return text;
+  }
+
+  // Form controls that carry a cell value — not lookup / assist buttons or
+  // the row selection checkbox of a grid
+  const CELL_CONTROL_SELECTOR =
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not(.ms-nav-grid-rowselectioncheckbox), ' +
+    'textarea, select';
+
+  /** Value as shown to the user: a select gives its option text, not the raw value */
+  function readControlDisplayValue(el) {
+    if (el.tagName === 'SELECT') {
+      // NAV also keeps the shown option in the title
+      const option = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+      return (option && option.text.trim()) || el.title || '';
+    }
+    return readFormControlValue(el);
   }
 
   function normalizeTableCell(text) {
@@ -1245,7 +1330,7 @@
 
   /** Record title BC shows in the page header, e.g. "10000 ∙ Adatum Corporation" */
   function readRecordCaption(view, pageName) {
-    const el = view.querySelector('.synopsis-trigger');
+    const el = view.querySelector('.synopsis-trigger, .pagetitle-control');
     const text = el ? sanitizeText(el.textContent).replace(/:\s*$/, '') : '';
     return text && text !== pageName ? text : '';
   }
@@ -1278,7 +1363,7 @@
       for (const cell of row.cells) {
         if (cell.classList.contains('ms-nav-hidden')) continue; // column hidden by the user
         const name = gridColumnName(table, cell.cellIndex);
-        if (name) rows.push([name, readGridCellValue(cell)]);
+        if (name) rows.push([name, readTableCellText(cell)]);
       }
       if (!rows.length) continue;
 
@@ -1290,8 +1375,8 @@
 
   function readFieldValue(container) {
     const edit = container.querySelector('.edit-container') || container;
-    const control = edit.querySelector('input:not([type="hidden"]), textarea, select');
-    if (control) return sanitizeText(readFormControlValue(control));
+    const control = edit.querySelector(CELL_CONTROL_SELECTOR);
+    if (control) return sanitizeText(readControlDisplayValue(control));
 
     // Read-only value: drop the hidden validation tooltip and icons
     const clone = edit.cloneNode(true);
@@ -1299,12 +1384,6 @@
       el.remove();
     }
     return normalizeTableCell(clone.textContent || '');
-  }
-
-  function readGridCellValue(cell) {
-    const control = cell.querySelector('input:not([type="hidden"]), textarea, select');
-    if (control) return sanitizeText(readFormControlValue(control));
-    return normalizeTableCell(cell.innerText || cell.textContent || '');
   }
 
   /** Column caption of a grid: BC puts it into the header cell's abbr */
