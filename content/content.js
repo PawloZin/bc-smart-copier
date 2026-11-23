@@ -486,22 +486,30 @@
     const target = e.target;
     if (!target) return;
 
-    const actionLabel = extractActionLabel(target);
+    // A field (caption or value) or a grid cell gives the path to the field
+    // or column, not an action
+    const fieldLabel = extractFieldCaption(target);
+    const columnLabel = fieldLabel ? '' : extractGridColumn(target);
+    const actionLabel = fieldLabel || columnLabel ? '' : extractActionLabel(target);
 
-    if (!actionLabel) {
-      showToast('Not an action', 'Click on an action button to copy its path.', true);
+    if (!fieldLabel && !columnLabel && !actionLabel) {
+      showToast('Not an action', 'Click on an action button or a field to copy its path.', true);
       return;
     }
 
-    const pageName      = extractPageName(target);
-    const activeTab     = extractActiveTab(target);
-    const submenuChain  = extractSubmenuChain(target);
-    const actionPath    = buildActionPath(pageName, activeTab, submenuChain, actionLabel);
+    const pageName = extractPageName(target);
+    const fastTab = extractFastTab(target);
+    const actionPath = fieldLabel || columnLabel
+      ? buildFieldPath(pageName, fastTab, fieldLabel ? 'field' : 'column', fieldLabel || columnLabel)
+      : buildActionPath(pageName, fastTab, extractActiveTab(target), extractSubmenuChain(target), actionLabel);
 
     copyToClipboard(actionPath).then((success) => {
       if (success) {
-        highlightElement(target.closest('button, [role="button"], li, .ms-nav-action-bar-item') || target);
-        showToast('Action path copied', actionPath, false);
+        highlightElement(fieldLabel ? target.closest('.ms-nav-edit-control-container')
+          : columnLabel ? target.closest('td, th')
+          : target.closest('button, [role="button"], li, .ms-nav-action-bar-item') || target);
+        showToast(fieldLabel ? 'Field path copied' : columnLabel ? 'Column path copied' : 'Action path copied',
+          actionPath, false);
       } else {
         showToast('Copy error', 'Failed to access clipboard.', true);
       }
@@ -696,8 +704,9 @@
       return '';
     }
 
-    // Non-popup (direct action click in secondary action bar):
-    const form = target.closest('form[controlname]');
+    // Non-popup (direct action click in secondary action bar). A part (e.g.
+    // Lines) has its own action bar in its header, outside the part's form.
+    const form = target.closest('.formhost-control') || target.closest('form[controlname]');
     if (form) {
       const el = form.querySelector(bcTabSelector);
       if (el) {
@@ -761,6 +770,64 @@
     return chain;
   }
 
+  /** Caption of the field (card field container) the target belongs to */
+  function extractFieldCaption(target) {
+    const container = target.closest('.ms-nav-edit-control-container');
+    const caption = container && container.querySelector('.ms-nav-edit-control-caption');
+    if (!caption || caption.classList.contains('ms-nav-hidden')) return '';
+    return sanitizeText(caption.textContent).replace(/:\s*$/, '');
+  }
+
+  /** Column caption of the grid cell (or header) the target belongs to */
+  function extractGridColumn(target) {
+    const cell = target.closest('td, th');
+    const table = cell && cell.closest('table');
+    return table ? gridColumnName(table, cell.cellIndex) : '';
+  }
+
+  /**
+   * FastTab (collapsible group of a card, e.g. General, Invoicing) or part
+   * (e.g. Lines) that contains the target — the nearer one wins. Same markup
+   * in Business Central and NAV 2016. Actions in a popup menu are rendered
+   * outside the page, so the menu button that opened it is used instead.
+   */
+  function extractFastTab(target) {
+    let start = target;
+    if (target.closest('[role="menu"], .ms-cui-menu')) {
+      const openers = document.querySelectorAll('[aria-haspopup][aria-expanded="true"]');
+      start = openers.length ? openers[openers.length - 1] : null;
+    }
+
+    for (let el = start; el && el !== document.body; el = el.parentElement) {
+      if (el.classList.contains('ms-nav-band')) {
+        const caption = el.querySelector(':scope > .columns-caption-container .ms-nav-columns-caption');
+        if (caption) return sanitizeText(caption.textContent);
+      }
+      if (el.classList.contains('formhost-control')) {
+        const caption = el.querySelector(':scope > .ms-nav-band-header .ms-nav-band-caption');
+        // BC puts the part's action bar into the caption — take its heading only
+        const heading = caption && (caption.querySelector('[role="heading"], .ms-nav-group-caption') || caption);
+        const text = heading ? sanitizeText(heading.textContent) : '';
+        if (text) return text;
+      }
+      if (el.classList.contains('spa-view')) break;
+    }
+    return '';
+  }
+
+  /**
+   * Path to a field or a grid column:
+   *   open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}
+   *   open page [Sales Order] and go to [Lines] FastTab and find column {No.}
+   */
+  function buildFieldPath(pageName, fastTab, kind, label) {
+    const parts = [];
+    if (pageName) parts.push(`open page [${pageName}]`);
+    if (fastTab) parts.push(`go to [${fastTab}] FastTab`);
+    parts.push(`find ${kind} {${label}}`);
+    return parts.join(' and ');
+  }
+
   /**
    * Assembles the final action path string.
    *
@@ -770,11 +837,15 @@
    *
    *   Nested submenu action:
    *     open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}
+   *
+   *   Action of a part (FastTab):
+   *     open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}
    */
-  function buildActionPath(pageName, activeTab, submenuChain, actionLabel) {
+  function buildActionPath(pageName, fastTab, activeTab, submenuChain, actionLabel) {
     const parts = [];
 
     if (pageName) parts.push(`open page [${pageName}]`);
+    if (fastTab) parts.push(`go to [${fastTab}] FastTab`);
 
     if (activeTab) {
       let tabPart = `go to [${activeTab}] tab`;

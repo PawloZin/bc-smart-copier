@@ -65,6 +65,11 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 4. Examples:
    - **Direct action**: `open page [Sales Order] and go to [Home] tab and click {Post}`
    - **Nested submenu**: `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}`
+   - **Action of a part (FastTab)**: `open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}`
+   - **Field**: `open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}`
+   - **Grid column**: `open page [Sales Order] and go to [Lines] FastTab and find column {No.}`
+   - **NAV 2016 ribbon**: `open page [Customer Card] and go to [Navigate] tab and click {Dimensions}`
+5. A **FastTab** is a collapsible group of fields on a card or document page (General, Invoicing, Payments, Shipping, …) or a part such as *Lines*; it is added whenever the clicked element is inside one — in Business Central and in NAV 2016.
 
 ### Copy Whole Table — hold `Alt` + Left Click
 1. Hold **ALT** (or **⌥ OPTION** on Mac) and point at any table — it gets a green outline (a separate overlay; the table's own styles are not changed).

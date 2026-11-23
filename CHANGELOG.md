@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.12.0] - 2026-11-23
+
+### Added
+- **FastTab in the action path** (Business Central and NAV 2016): When the clicked element is inside a FastTab (General, Invoicing, Payments, …) or a part (Lines), the path names it — e.g. `open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}`. For actions in a popup menu the FastTab of the menu button is used.
+- **Field and column paths**: The action path shortcut on a field (caption or value) copies the path to the field, e.g. `open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}`; on a grid cell the path to the column, e.g. `… and go to [Lines] FastTab and find column {No.}`.
+
+### Fixed
+- **Tab of part actions**: Actions in a part's own action bar (e.g. *Lines → Functions*) reported the page's tab (*Home*) instead of the part's tab.
+
+---
+
 ## [1.11.0] - 2026-11-23
 
 ### Added
