@@ -10,11 +10,29 @@ const DEFAULT_AGENT_INSTRUCTIONS =
   '3. Check the knowledge base thoroughly, including the application code it contains (tables, pages, codeunits, triggers, procedures, event subscribers), and trace where this error is raised and why; base the answer on what you find there.\n' +
   '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
   'If something is missing, say what to check in Business Central.';
+const DEFAULT_NAV_AGENT_INSTRUCTIONS =
+  'Help investigate this Microsoft Dynamics NAV 2016 error.\n' +
+  '1. Explain what the error means and its most likely cause, using the message and the record data above.\n' +
+  '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.\n' +
+  '3. Check the knowledge base thoroughly, including the C/AL application code it contains (tables, pages, codeunits, triggers, functions, events), and trace where this error is raised and why; base the answer on what you find there.\n' +
+  '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
+  'If something is missing, say what to check in Dynamics NAV.';
+const DEFAULT_ENVIRONMENTS = 'STG = STG\nQA = QA\nclient = PROD';
 const DEFAULT_ERROR_REPORT = {
   errorButtons: true,
   errorScreenshot: false,
-  environments: 'STG = STG\nQA = QA\nclient = PROD',
-  agentInstructions: DEFAULT_AGENT_INSTRUCTIONS
+  environments: DEFAULT_ENVIRONMENTS,
+  agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+  navErrorButtons: true,
+  navEnvironments: DEFAULT_ENVIRONMENTS,
+  navAgentInstructions: DEFAULT_NAV_AGENT_INSTRUCTIONS
+};
+// Error report setup per system — the same fields, stored under its own keys
+const ERROR_SYSTEMS = {
+  bc: { buttons: 'errorButtons', environments: 'environments', instructions: 'agentInstructions',
+        defaultInstructions: DEFAULT_AGENT_INSTRUCTIONS },
+  nav: { buttons: 'navErrorButtons', environments: 'navEnvironments', instructions: 'navAgentInstructions',
+         defaultInstructions: DEFAULT_NAV_AGENT_INSTRUCTIONS }
 };
 const SCREENSHOT_PERMISSION = { origins: ['<all_urls>'] };
 
@@ -40,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const environments = document.getElementById('environments');
   const agentInstructions = document.getElementById('agentInstructions');
   const resetInstructions = document.getElementById('resetInstructions');
+  const systemButtons = document.querySelectorAll('.system-switch button');
 
   const isMac = (typeof navigator !== 'undefined') && (
     (navigator.userAgentData && navigator.userAgentData.platform === 'macOS') ||
@@ -90,33 +109,63 @@ document.addEventListener('DOMContentLoaded', () => {
       saveSettings({ enabled: isEnabled }, () => updateUI(isEnabled));
     });
 
-    chrome.storage.local.get(DEFAULT_ERROR_REPORT, (res) => {
-      errorButtons.checked = res.errorButtons !== false;
+    let errorSettings = { ...DEFAULT_ERROR_REPORT };
+    let system = 'bc';
+
+    chrome.storage.local.get({ ...DEFAULT_ERROR_REPORT, errorSetupSystem: 'bc' }, (res) => {
+      errorSettings = res;
       errorScreenshot.checked = res.errorScreenshot === true;
-      environments.value = res.environments;
-      agentInstructions.value = res.agentInstructions || DEFAULT_AGENT_INSTRUCTIONS;
       if (errorScreenshot.checked) checkScreenshotPermission();
+      showSystem(ERROR_SYSTEMS[res.errorSetupSystem] ? res.errorSetupSystem : 'bc');
     });
 
-    errorButtons.addEventListener('change', () => saveSettings({ errorButtons: errorButtons.checked }));
+    for (const button of systemButtons) {
+      button.addEventListener('click', () => {
+        showSystem(button.dataset.system);
+        saveSettings({ errorSetupSystem: system });
+      });
+    }
+
+    errorButtons.addEventListener('change', () => saveErrorSetting('buttons', errorButtons.checked));
     errorScreenshot.addEventListener('change', onScreenshotChange);
 
     saveTextOnInput(environments, 'environments');
-    saveTextOnInput(agentInstructions, 'agentInstructions');
+    saveTextOnInput(agentInstructions, 'instructions');
 
     resetInstructions.addEventListener('click', () => {
-      agentInstructions.value = DEFAULT_AGENT_INSTRUCTIONS;
-      saveSettings({ agentInstructions: DEFAULT_AGENT_INSTRUCTIONS });
+      agentInstructions.value = ERROR_SYSTEMS[system].defaultInstructions;
+      saveErrorSetting('instructions', agentInstructions.value);
     });
-  }
 
-  // Text settings are saved shortly after typing stops
-  function saveTextOnInput(field, key) {
-    let timer = 0;
-    field.addEventListener('input', () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => saveSettings({ [key]: field.value }), 300);
-    });
+    // Fills the error report fields with the setup of one system
+    function showSystem(name) {
+      system = name;
+      const keys = ERROR_SYSTEMS[system];
+      for (const button of systemButtons) {
+        button.setAttribute('aria-pressed', String(button.dataset.system === system));
+      }
+      errorButtons.checked = errorSettings[keys.buttons] !== false;
+      environments.value = errorSettings[keys.environments];
+      agentInstructions.value = errorSettings[keys.instructions] || keys.defaultInstructions;
+    }
+
+    function saveErrorSetting(field, value) {
+      const key = ERROR_SYSTEMS[system][field];
+      errorSettings[key] = value;
+      saveSettings({ [key]: value });
+    }
+
+    // Text settings are saved shortly after typing stops, for the system
+    // shown when typing started
+    function saveTextOnInput(textField, field) {
+      let timer = 0;
+      textField.addEventListener('input', () => {
+        clearTimeout(timer);
+        const key = ERROR_SYSTEMS[system][field];
+        errorSettings[key] = textField.value;
+        timer = setTimeout(() => saveSettings({ [key]: textField.value }), 300);
+      });
+    }
   }
 
   // The option is saved before asking: the permission prompt may close the

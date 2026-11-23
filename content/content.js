@@ -1,7 +1,8 @@
 /**
  * BC Smart Copier - Content Script
  * Captures modifier + Left Click on cells in Microsoft Dynamics 365 Business Central
- * and copies clean text content to clipboard.
+ * and Microsoft Dynamics NAV 2016 (Web Client) and copies clean text content to
+ * clipboard.
  *
  * Default shortcuts (configurable in the popup):
  *   Shift + Left Click        → Copy cell value
@@ -37,11 +38,24 @@
     '3. Check the knowledge base thoroughly, including the application code it contains (tables, pages, codeunits, triggers, procedures, event subscribers), and trace where this error is raised and why; base the answer on what you find there.\n' +
     '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
     'If something is missing, say what to check in Business Central.';
+  const DEFAULT_NAV_AGENT_INSTRUCTIONS =
+    'Help investigate this Microsoft Dynamics NAV 2016 error.\n' +
+    '1. Explain what the error means and its most likely cause, using the message and the record data above.\n' +
+    '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.\n' +
+    '3. Check the knowledge base thoroughly, including the C/AL application code it contains (tables, pages, codeunits, triggers, functions, events), and trace where this error is raised and why; base the answer on what you find there.\n' +
+    '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
+    'If something is missing, say what to check in Dynamics NAV.';
+  const DEFAULT_ENVIRONMENTS = 'STG = STG\nQA = QA\nclient = PROD';
+  // Separate setup for Business Central and NAV 2016 (nav* keys); the
+  // screenshot option is shared, as is its permission
   const DEFAULT_ERROR_REPORT = {
     errorButtons: true,
     errorScreenshot: false,
-    environments: 'STG = STG\nQA = QA\nclient = PROD',
-    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS
+    environments: DEFAULT_ENVIRONMENTS,
+    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+    navErrorButtons: true,
+    navEnvironments: DEFAULT_ENVIRONMENTS,
+    navAgentInstructions: DEFAULT_NAV_AGENT_INSTRUCTIONS
   };
 
   let isEnabled = true;
@@ -485,22 +499,30 @@
     const target = e.target;
     if (!target) return;
 
-    const actionLabel = extractActionLabel(target);
+    // A field (caption or value) or a grid cell gives the path to the field
+    // or column, not an action
+    const fieldLabel = extractFieldCaption(target);
+    const columnLabel = fieldLabel ? '' : extractGridColumn(target);
+    const actionLabel = fieldLabel || columnLabel ? '' : extractActionLabel(target);
 
-    if (!actionLabel) {
-      showToast('Not an action', 'Click on an action button to copy its path.', true);
+    if (!fieldLabel && !columnLabel && !actionLabel) {
+      showToast('Not an action', 'Click on an action button or a field to copy its path.', true);
       return;
     }
 
-    const pageName      = extractPageName(target);
-    const activeTab     = extractActiveTab(target);
-    const submenuChain  = extractSubmenuChain(target);
-    const actionPath    = buildActionPath(pageName, activeTab, submenuChain, actionLabel);
+    const pageName = extractPageName(target);
+    const fastTab = extractFastTab(target);
+    const actionPath = fieldLabel || columnLabel
+      ? buildFieldPath(pageName, fastTab, fieldLabel ? 'field' : 'column', fieldLabel || columnLabel)
+      : buildActionPath(pageName, fastTab, extractActiveTab(target), extractSubmenuChain(target), actionLabel);
 
     copyToClipboard(actionPath).then((success) => {
       if (success) {
-        highlightElement(target.closest('button, [role="button"], li, .ms-nav-action-bar-item') || target);
-        showToast('Action path copied', actionPath, false);
+        highlightElement(fieldLabel ? target.closest('.ms-nav-edit-control-container')
+          : columnLabel ? target.closest('td, th')
+          : target.closest('button, [role="button"], li, .ms-nav-action-bar-item') || target);
+        showToast(fieldLabel ? 'Field path copied' : columnLabel ? 'Column path copied' : 'Action path copied',
+          actionPath, false);
       } else {
         showToast('Copy error', 'Failed to access clipboard.', true);
       }
@@ -567,6 +589,12 @@
   function extractPageName(target) {
     const scope = findPageScope(target);
 
+    // 0. Dynamics NAV 2016: "Edit - Customer Card" style window title
+    if (isNavClient()) {
+      const navName = extractNavPageName(scope);
+      if (navName) return navName;
+    }
+
     // 1. Visible page header title (most accurate display caption for both Card & List pages)
     const titleEl = scope.querySelector(
       '.synopsis-trigger, [id$="_subtitle"] span, .menu-bar__page-title [role="heading"]'
@@ -610,6 +638,44 @@
   }
 
   /**
+   * Dynamics NAV 2016 Web Client: SharePoint-style ribbon, ASP.NET form,
+   * "/WebClient/" in the address. Field, grid and FastTab markup is the same
+   * as in Business Central; page titles, ribbon tabs and errors differ.
+   */
+  function isNavClient() {
+    return /\/WebClient\//i.test(location.pathname) || !!document.querySelector('.ms-cui-ribbon');
+  }
+
+  /**
+   * NAV page caption from the window title of the page, which reads
+   * "<mode> - <page>" or "<mode> - <page> - <record>", e.g.
+   * "Edit - Sales Order - 101005 ∙ John Haddock Insurance Co.". The mode
+   * (Edit, View, New, Delete — localized) is one word.
+   */
+  function extractNavPageName(scope) {
+    const titleEl = scope.querySelector('.native-container-title');
+    let title = titleEl ? sanitizeText(titleEl.textContent) : '';
+    if (!title) return '';
+
+    const record = extractNavRecordCaption(scope);
+    if (record && title.endsWith(' - ' + record)) title = title.slice(0, -(record.length + 3));
+    return title.replace(/^[^\s-]+ - /, '').trim();
+  }
+
+  /** NAV page mode from the window title: Edit, View, New, Delete (localized) */
+  function extractNavPageMode(scope) {
+    const titleEl = scope.querySelector('.native-container-title');
+    const match = titleEl ? sanitizeText(titleEl.textContent).match(/^([^\s-]+) - /) : null;
+    return match ? match[1] : '';
+  }
+
+  /** NAV record caption shown in the page header, e.g. "10000 ∙ Adatum Corporation" */
+  function extractNavRecordCaption(scope) {
+    const el = scope.querySelector('.pagetitle-control');
+    return el ? sanitizeText(el.textContent) : '';
+  }
+
+  /**
    * Returns the BC page view (.spa-view) that owns the clicked element.
    * Popup menus are rendered in a portal outside the view, so for them the
    * top-most shown view is used (BC marks every lower view "spa-not-top-most").
@@ -633,6 +699,9 @@
    *   - aria-expanded="true"   when their dropdown is currently shown
    */
   function extractActiveTab(target) {
+    const navTab = extractNavRibbonTab(target);
+    if (navTab) return navTab;
+
     const bcTabSelector = '[data-top-level-action="true"][aria-haspopup="true"][aria-expanded="true"]';
 
     const inPopup = !!target.closest('[role="menu"]');
@@ -655,8 +724,9 @@
       return '';
     }
 
-    // Non-popup (direct action click in secondary action bar):
-    const form = target.closest('form[controlname]');
+    // Non-popup (direct action click in secondary action bar). A part (e.g.
+    // Lines) has its own action bar in its header, outside the part's form.
+    const form = target.closest('.formhost-control') || target.closest('form[controlname]');
     if (form) {
       const el = form.querySelector(bcTabSelector);
       if (el) {
@@ -670,6 +740,20 @@
     }
 
     return '';
+  }
+
+  /**
+   * NAV ribbon tab of a ribbon button: its tab panel is labelled by the tab.
+   * Buttons in a flyout menu (outside the panel) use the selected tab.
+   */
+  function extractNavRibbonTab(target) {
+    const panel = target.closest('.ms-cui-tabBody[aria-labelledby]');
+    let tab = panel ? document.getElementById(panel.getAttribute('aria-labelledby')) : null;
+    if (!tab && target.closest('.ms-cui-menu')) {
+      const scope = findPageScope(target);
+      tab = scope.querySelector('li.ms-cui-tt-s') || document.querySelector('li.ms-cui-tt-s');
+    }
+    return tab ? sanitizeText(tab.textContent) : '';
   }
 
   /**
@@ -706,6 +790,64 @@
     return chain;
   }
 
+  /** Caption of the field (card field container) the target belongs to */
+  function extractFieldCaption(target) {
+    const container = target.closest('.ms-nav-edit-control-container');
+    const caption = container && container.querySelector('.ms-nav-edit-control-caption');
+    if (!caption || caption.classList.contains('ms-nav-hidden')) return '';
+    return sanitizeText(caption.textContent).replace(/:\s*$/, '');
+  }
+
+  /** Column caption of the grid cell (or header) the target belongs to */
+  function extractGridColumn(target) {
+    const cell = target.closest('td, th');
+    const table = cell && cell.closest('table');
+    return table ? gridColumnName(table, cell.cellIndex) : '';
+  }
+
+  /**
+   * FastTab (collapsible group of a card, e.g. General, Invoicing) or part
+   * (e.g. Lines) that contains the target — the nearer one wins. Same markup
+   * in Business Central and NAV 2016. Actions in a popup menu are rendered
+   * outside the page, so the menu button that opened it is used instead.
+   */
+  function extractFastTab(target) {
+    let start = target;
+    if (target.closest('[role="menu"], .ms-cui-menu')) {
+      const openers = document.querySelectorAll('[aria-haspopup][aria-expanded="true"]');
+      start = openers.length ? openers[openers.length - 1] : null;
+    }
+
+    for (let el = start; el && el !== document.body; el = el.parentElement) {
+      if (el.classList.contains('ms-nav-band')) {
+        const caption = el.querySelector(':scope > .columns-caption-container .ms-nav-columns-caption');
+        if (caption) return sanitizeText(caption.textContent);
+      }
+      if (el.classList.contains('formhost-control')) {
+        const caption = el.querySelector(':scope > .ms-nav-band-header .ms-nav-band-caption');
+        // BC puts the part's action bar into the caption — take its heading only
+        const heading = caption && (caption.querySelector('[role="heading"], .ms-nav-group-caption') || caption);
+        const text = heading ? sanitizeText(heading.textContent) : '';
+        if (text) return text;
+      }
+      if (el.classList.contains('spa-view')) break;
+    }
+    return '';
+  }
+
+  /**
+   * Path to a field or a grid column:
+   *   open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}
+   *   open page [Sales Order] and go to [Lines] FastTab and find column {No.}
+   */
+  function buildFieldPath(pageName, fastTab, kind, label) {
+    const parts = [];
+    if (pageName) parts.push(`open page [${pageName}]`);
+    if (fastTab) parts.push(`go to [${fastTab}] FastTab`);
+    parts.push(`find ${kind} {${label}}`);
+    return parts.join(' and ');
+  }
+
   /**
    * Assembles the final action path string.
    *
@@ -715,11 +857,15 @@
    *
    *   Nested submenu action:
    *     open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}
+   *
+   *   Action of a part (FastTab):
+   *     open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}
    */
-  function buildActionPath(pageName, activeTab, submenuChain, actionLabel) {
+  function buildActionPath(pageName, fastTab, activeTab, submenuChain, actionLabel) {
     const parts = [];
 
     if (pageName) parts.push(`open page [${pageName}]`);
+    if (fastTab) parts.push(`go to [${fastTab}] FastTab`);
 
     if (activeTab) {
       let tabPart = `go to [${activeTab}] tab`;
@@ -937,7 +1083,7 @@
         const colSpan = Math.max(1, cell.colSpan || 1);
         const rowSpan = Math.max(1, cell.rowSpan || 1);
         for (let i = 0; i < colSpan; i++) {
-          values[col + i] = i === 0 ? normalizeTableCell(cell.innerText || cell.textContent || '') : '';
+          values[col + i] = i === 0 ? readTableCellText(cell) : '';
           if (rowSpan > 1) pending[col + i] = rowSpan - 1;
         }
         col += colSpan;
@@ -952,6 +1098,36 @@
     const width = grid.reduce((max, row) => Math.max(max, row.length), 0);
     for (const row of grid) while (row.length < width) row.push('');
     return grid;
+  }
+
+  /**
+   * Text of a table cell. Cells in edit mode hold a form control (its value
+   * is not part of the text); a select gives its selected option. NAV grids
+   * keep the column captions in a separate header table, so an empty header
+   * cell falls back to its abbr attribute.
+   */
+  function readTableCellText(cell) {
+    const control = cell.querySelector(CELL_CONTROL_SELECTOR);
+    if (control) return normalizeTableCell(readControlDisplayValue(control));
+    const text = normalizeTableCell(cell.innerText || cell.textContent || '');
+    if (!text && cell.tagName === 'TH') return normalizeTableCell(cell.getAttribute('abbr') || '');
+    return text;
+  }
+
+  // Form controls that carry a cell value — not lookup / assist buttons or
+  // the row selection checkbox of a grid
+  const CELL_CONTROL_SELECTOR =
+    'input:not([type="hidden"]):not([type="button"]):not([type="submit"]):not(.ms-nav-grid-rowselectioncheckbox), ' +
+    'textarea, select';
+
+  /** Value as shown to the user: a select gives its option text, not the raw value */
+  function readControlDisplayValue(el) {
+    if (el.tagName === 'SELECT') {
+      // NAV also keeps the shown option in the title
+      const option = el.selectedIndex >= 0 ? el.options[el.selectedIndex] : null;
+      return (option && option.text.trim()) || el.title || '';
+    }
+    return readFormControlValue(el);
   }
 
   function normalizeTableCell(text) {
@@ -1010,10 +1186,31 @@
 
   function scanForErrors() {
     errorScanTimer = 0;
-    const active = isEnabled && errorReport.errorButtons !== false;
+    const nav = isNavClient();
+    const active = isEnabled && errorReport[nav ? 'navErrorButtons' : 'errorButtons'] !== false;
     if (pendingShot && !pendingShot.root.isConnected) pendingShot = null;
 
-    updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
+    updateErrorPanel(!active ? null : nav ? findNavError() : findErrorDialog() || findValidationError());
+  }
+
+  /**
+   * NAV 2016 shows errors in a message bar at the top of the page
+   * (.ms-nav-validationmessage). Next to a general "The page has an error"
+   * bar the actual message has role="alert" — that one is preferred. Only
+   * the top-most page counts; pages below keep their old bars.
+   */
+  function findNavError() {
+    const views = Array.from(document.querySelectorAll('.spa-view.shown'));
+    const scope = views[views.length - 1] || document;
+    const bars = Array.from(scope.querySelectorAll('.ms-nav-validationmessage'))
+      .filter((bar) => bar.getClientRects().length > 0 && !bar.closest('.ms-nav-hidden') &&
+                       bar.querySelector('.ms-nav-validationpanel-text'));
+    return bars.find((bar) => bar.getAttribute('role') === 'alert') || bars[bars.length - 1] || null;
+  }
+
+  /** "Dynamics NAV" or "Business Central" — panel title and report heading */
+  function systemShortName() {
+    return isNavClient() ? 'Dynamics NAV' : 'Business Central';
   }
 
   /** Top-most visible BC error dialog in this frame (a closed one may stay in the DOM) */
@@ -1061,7 +1258,7 @@
       const header = document.createElement('div');
       header.className = 'bc-sc-error-panel-header';
       const title = document.createElement('span');
-      title.textContent = 'Business Central error';
+      title.className = 'bc-sc-error-panel-title';
       const close = document.createElement('button');
       close.type = 'button';
       close.className = 'bc-sc-error-panel-close';
@@ -1080,6 +1277,10 @@
     }
 
     errorPanelRoot = root;
+    const titleEl = errorPanel.querySelector('.bc-sc-error-panel-title');
+    const titleText = `${systemShortName()} error`;
+    if (titleEl.textContent !== titleText) titleEl.textContent = titleText;
+
     const messageEl = errorPanel.querySelector('.bc-sc-error-panel-message');
     const text = info.message;
     if (messageEl.textContent !== text) messageEl.textContent = text;
@@ -1190,6 +1391,7 @@
       ...readPageContext(),
       page: pageName,
       record: readRecordCaption(view, pageName),
+      mode: isNavClient() && view !== document ? extractNavPageMode(view) : '',
       field: info.field,
       message: info.message,
       sections: readRecordSections(view, pageName),
@@ -1201,6 +1403,11 @@
 
   /** Error message (and the field name for validation errors) */
   function readErrorInfo(root) {
+    if (root.matches('.ms-nav-validationmessage')) {
+      const text = root.querySelector('.ms-nav-validationpanel-text');
+      return { field: '', message: sanitizeText(text ? text.textContent : '') };
+    }
+
     if (root.matches('form.error-dialog')) {
       const el = root.querySelector('.error-dialog-caption') ||
                  root.querySelector('.ms-nav-logical-dialog') ||
@@ -1245,7 +1452,7 @@
 
   /** Record title BC shows in the page header, e.g. "10000 ∙ Adatum Corporation" */
   function readRecordCaption(view, pageName) {
-    const el = view.querySelector('.synopsis-trigger');
+    const el = view.querySelector('.synopsis-trigger, .pagetitle-control');
     const text = el ? sanitizeText(el.textContent).replace(/:\s*$/, '') : '';
     return text && text !== pageName ? text : '';
   }
@@ -1257,7 +1464,8 @@
    */
   function readRecordSections(view, pageName) {
     const sections = [];
-    const skip = '.ms-nav-layout-factbox-pane-container, form.error-dialog, .bc-sc-error-ui';
+    // FactBoxes: BC pane container, NAV 2016 .ms-nav-cardfactbox
+    const skip = '.ms-nav-layout-factbox-pane-container, .ms-nav-cardfactbox, form.error-dialog, .bc-sc-error-ui';
 
     const fields = [];
     for (const container of view.querySelectorAll('.ms-nav-edit-control-container')) {
@@ -1278,7 +1486,7 @@
       for (const cell of row.cells) {
         if (cell.classList.contains('ms-nav-hidden')) continue; // column hidden by the user
         const name = gridColumnName(table, cell.cellIndex);
-        if (name) rows.push([name, readGridCellValue(cell)]);
+        if (name) rows.push([name, readTableCellText(cell)]);
       }
       if (!rows.length) continue;
 
@@ -1290,8 +1498,8 @@
 
   function readFieldValue(container) {
     const edit = container.querySelector('.edit-container') || container;
-    const control = edit.querySelector('input:not([type="hidden"]), textarea, select');
-    if (control) return sanitizeText(readFormControlValue(control));
+    const control = edit.querySelector(CELL_CONTROL_SELECTOR);
+    if (control) return sanitizeText(readControlDisplayValue(control));
 
     // Read-only value: drop the hidden validation tooltip and icons
     const clone = edit.cloneNode(true);
@@ -1299,12 +1507,6 @@
       el.remove();
     }
     return normalizeTableCell(clone.textContent || '');
-  }
-
-  function readGridCellValue(cell) {
-    const control = cell.querySelector('input:not([type="hidden"]), textarea, select');
-    if (control) return sanitizeText(readFormControlValue(control));
-    return normalizeTableCell(cell.innerText || cell.textContent || '');
   }
 
   /** Column caption of a grid: BC puts it into the header cell's abbr */
@@ -1343,6 +1545,7 @@
 
     const main = urls[0];
     return {
+      system: isNavClient() ? 'Microsoft Dynamics NAV 2016' : 'Microsoft Dynamics 365 Business Central',
       environment: detectEnvironment(main.host + main.pathname),
       host: main.host,
       company: param('company'),
@@ -1358,7 +1561,8 @@
    */
   function detectEnvironment(address) {
     const haystack = address.toLowerCase();
-    for (const line of String(errorReport.environments || '').split(/\r?\n/)) {
+    const rules = errorReport[isNavClient() ? 'navEnvironments' : 'environments'];
+    for (const line of String(rules || '').split(/\r?\n/)) {
       const rule = line.trim();
       if (!rule || rule.startsWith('#')) continue;
       const eq = rule.indexOf('=');
@@ -1433,12 +1637,13 @@
   // --- Report formats ---------------------------------------------------------
 
   function reportHeaderLines(report) {
-    const lines = [`Environment: ${report.environment || `unknown (${report.host})`}`];
+    const lines = [`System: ${report.system}`, `Environment: ${report.environment || `unknown (${report.host})`}`];
     if (report.company) lines.push(`Company: ${report.company}`);
     if (report.page || report.pageId) {
       lines.push(`Page: ${report.page || '?'}${report.pageId ? ` (page ${report.pageId})` : ''}`);
     }
     if (report.record) lines.push(`Record: ${report.record}`);
+    if (report.mode) lines.push(`Page mode: ${report.mode}`);
     if (report.field) lines.push(`Field: ${report.field}`);
     lines.push(`Time: ${report.time}`);
     lines.push(`URL: ${report.url}`);
@@ -1453,7 +1658,7 @@
   /** Markdown for an AI agent: context, data and what to do with it */
   function buildAgentText(report) {
     const cell = (value) => (value || '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
-    const out = ['# Business Central error', '', ...reportHeaderLines(report), '',
+    const out = [`# ${report.system.replace(/^Microsoft (Dynamics 365 )?/, '')} error`, '', ...reportHeaderLines(report), '',
       '## Error message', '', report.message || '(no message)', ''];
 
     for (const section of report.sections) {
@@ -1468,7 +1673,9 @@
     }
 
     // Editable in the popup; an emptied field falls back to the default
-    const instructions = String(errorReport.agentInstructions || '').trim() || DEFAULT_AGENT_INSTRUCTIONS;
+    const nav = /NAV/.test(report.system);
+    const instructions = String(errorReport[nav ? 'navAgentInstructions' : 'agentInstructions'] || '').trim() ||
+                         (nav ? DEFAULT_NAV_AGENT_INSTRUCTIONS : DEFAULT_AGENT_INSTRUCTIONS);
     out.push('## Task', '', instructions);
     return out.join('\n');
   }
@@ -1478,12 +1685,13 @@
    * expected result, further steps) stay empty for the reporter.
    */
   function jiraBugFields(report) {
-    const preconditions = [];
+    const preconditions = [`System: ${report.system}`];
     if (report.company) preconditions.push(`Company: ${report.company}`);
     if (report.page || report.pageId) {
       preconditions.push(`Page: ${report.page || '?'}${report.pageId ? ` (page ${report.pageId})` : ''}`);
     }
     if (report.record) preconditions.push(`Record: ${report.record}`);
+    if (report.mode) preconditions.push(`Page mode: ${report.mode}`);
 
     const steps = [`Open ${report.page || 'the page'}${report.record ? ` for ${report.record}` : ''}`];
     if (report.field) steps.push(`Enter a value in the field ${report.field}`);

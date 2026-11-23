@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2026-11-23
+
+### Added
+- **Error reports in Dynamics NAV 2016**: NAV shows errors in a message bar at the top of the page (e.g. *You cannot delete Item 1000 because there is at least one outstanding Sales Order that includes this item.*). The error panel with *Copy for AI agent* / *Copy for Jira* appears for it too; the actual message (`role="alert"`) is preferred over the general *The page has an error* bar. The report holds the page, record, page mode (Edit, View, New, Delete) and all fields; NAV 2016 has no technical details (call stack) to add.
+- **Separate setup for Business Central and NAV 2016**: In the popup (*Error reports*) a switch selects the system; buttons on errors, environment rules and AI agent instructions are stored per system. The default NAV instructions refer to C/AL code. The screenshot option is shared.
+- Reports name the system (`System: Microsoft Dynamics NAV 2016` / `… Business Central`); the panel title says *Dynamics NAV error* or *Business Central error*.
+- NAV FactBoxes are skipped in the record data.
+- Test fixture: NAV 2016 *Item Card* with a delete error.
+
+---
+
+## [1.12.0] - 2026-11-23
+
+### Added
+- **FastTab in the action path** (Business Central and NAV 2016): When the clicked element is inside a FastTab (General, Invoicing, Payments, …) or a part (Lines), the path names it — e.g. `open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}`. For actions in a popup menu the FastTab of the menu button is used.
+- **Field and column paths**: The action path shortcut on a field (caption or value) copies the path to the field, e.g. `open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}`; on a grid cell the path to the column, e.g. `… and go to [Lines] FastTab and find column {No.}`.
+
+### Fixed
+- **Tab of part actions**: Actions in a part's own action bar (e.g. *Lines → Functions*) reported the page's tab (*Home*) instead of the part's tab.
+
+---
+
+## [1.11.0] - 2026-11-23
+
+### Added
+- **Microsoft Dynamics NAV 2016 (Web Client)**: Cell copy, Table Copier and action path work in NAV 2016 too.
+  - Action path: the page name comes from the NAV window title (`Edit - Customer Card` → `Customer Card`, the record part of `Edit - Sales Order - 101005 ∙ …` is dropped), and the ribbon tab of the clicked button (Home, Actions, Navigate, Report, …) is detected — e.g. `open page [Customer Card] and go to [Navigate] tab and click {Dimensions}`.
+  - Test fixtures: NAV 2016 *Customer Card* and *Sales Order*.
+
+### Fixed
+- **Table Copier in edit mode**: Cells holding a form control (edit-mode grids in NAV and BC) copied an empty value or, for option fields, every option at once. The control's value and the selected option are copied now; the row selection checkbox is skipped, and an empty header cell uses its column caption (`abbr`) — NAV keeps the captions in a separate header table.
+
+---
+
 ## [1.10.0] - 2026-11-03
 
 ### Changed

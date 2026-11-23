@@ -5,7 +5,7 @@
 <h1 align="center">BC Smart Copier</h1>
 
 <p align="center">
-  A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b>.
+  A lightweight browser extension for <b>Microsoft Dynamics 365 Business Central</b> and <b>Microsoft Dynamics NAV 2016</b> (Web Client).
 </p>
 
 <p align="center">
@@ -65,6 +65,11 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 4. Examples:
    - **Direct action**: `open page [Sales Order] and go to [Home] tab and click {Post}`
    - **Nested submenu**: `open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}`
+   - **Action of a part (FastTab)**: `open page [Posted Purchase Receipt] and go to [Lines] FastTab and go to [Functions] tab and click {Undo Receipt}`
+   - **Field**: `open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}`
+   - **Grid column**: `open page [Sales Order] and go to [Lines] FastTab and find column {No.}`
+   - **NAV 2016 ribbon**: `open page [Customer Card] and go to [Navigate] tab and click {Dimensions}`
+5. A **FastTab** is a collapsible group of fields on a card or document page (General, Invoicing, Payments, Shipping, …) or a part such as *Lines*; it is added whenever the clicked element is inside one — in Business Central and in NAV 2016.
 
 ### Copy Whole Table — hold `Alt` + Left Click
 1. Hold **ALT** (or **⌥ OPTION** on Mac) and point at any table — it gets a green outline (a separate overlay; the table's own styles are not changed).
@@ -73,6 +78,8 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 4. Releasing the key, moving off the table or switching windows removes the outline. Without the key held, the page works as usual.
 
 ### Error Reports — Copy for AI agent / Copy for Jira
+Works in Business Central (error dialogs, field validation errors) and in **Dynamics NAV 2016** (the error message bar at the top of the page). The popup has a separate setup for each system — buttons, environment rules and AI agent instructions; switch between *Business Central* and *Dynamics NAV 2016* above the fields.
+
 1. When BC shows an error dialog or a field validation error (red field), two buttons appear in a panel at the bottom center of the page.
 2. **Copy for AI agent** copies Markdown with the error and a short task for an agent that has your knowledge base (documentation, Jira issues, application code) — the task text is editable in the popup. **Copy for Jira** copies the same data as Jira markup / rich text in the bug template: *Short BUG description*, *Environment*, *Role/actor*, *Pre conditions*, *Steps to reproduce the BUG*, *Actual result*, *Expected results*, *Additional data* (fields the extension cannot know stay empty).
 3. The report contains:

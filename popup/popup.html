@@ -14,7 +14,7 @@
       <span class="bc-badge">BC</span>
       <span class="title">Smart Copier</span>
     </div>
-    <span class="version" id="version">v1.10.0</span>
+    <span class="version" id="version">v1.13.0</span>
   </div>
 
   <div class="card status-card">
@@ -51,7 +51,9 @@
       <div class="shortcut-label">Copy action path</div>
       <div class="shortcut-box" id="shortcutBoxAction"></div>
       <p class="instruction-desc">
-        Click an action button to copy its full BC navigation path.<br>
+        Click an action button, a field or a grid column to copy its full navigation path, including the
+        FastTab.<br>
+        <em>Field: <code>open page [Customer Card] and go to [Invoicing] FastTab and find field {Customer Posting Group}</code></em><br>
         <em>Direct: <code>open page [Sales Order] and go to [Home] tab and click {Post}</code></em><br>
         <em>Submenu:
           <code>open page [Sales Orders] and go to [Related] tab -> [Documents] and click {Prepayment Invoices}</code></em>
@@ -104,14 +106,9 @@
   <div class="card settings-card">
     <div class="instruction-title">Error reports</div>
     <p class="instruction-desc">
-      When Business Central shows an error, buttons copy it for an AI agent or for Jira — with the
-      environment, page, error details and the current record.
+      When Business Central or NAV 2016 shows an error, buttons copy it for an AI agent or for Jira — with
+      the environment, page, error details and the current record.
     </p>
-
-    <label class="setting-row" for="errorButtons">
-      <span class="setting-label">Copy buttons on errors</span>
-      <input type="checkbox" id="errorButtons" checked>
-    </label>
 
     <label class="setting-row" for="errorScreenshot">
       <span class="setting-label">Screenshot (second click)</span>
@@ -120,6 +117,16 @@
     <p class="setting-message setting-warning" id="screenshotWarning" hidden>
       Screenshot access was not granted. Switch the option on again and allow access.
     </p>
+
+    <div class="system-switch" role="group" aria-label="Setup for">
+      <button type="button" data-system="bc" aria-pressed="true">Business Central</button>
+      <button type="button" data-system="nav" aria-pressed="false">Dynamics NAV 2016</button>
+    </div>
+
+    <label class="setting-row" for="errorButtons">
+      <span class="setting-label">Copy buttons on errors</span>
+      <input type="checkbox" id="errorButtons" checked>
+    </label>
 
     <label class="setting-column" for="environments">
       <span class="setting-label">Environment by address</span>
@@ -138,7 +145,7 @@
   </div>
 
   <div class="footer">
-    <span>For Microsoft Dynamics 365 Business Central</span>
+    <span>For Microsoft Dynamics 365 Business Central and Dynamics NAV 2016</span>
   </div>
 
   <script src="popup.js"></script>
