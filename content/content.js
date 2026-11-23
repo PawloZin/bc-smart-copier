@@ -38,11 +38,24 @@
     '3. Check the knowledge base thoroughly, including the application code it contains (tables, pages, codeunits, triggers, procedures, event subscribers), and trace where this error is raised and why; base the answer on what you find there.\n' +
     '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
     'If something is missing, say what to check in Business Central.';
+  const DEFAULT_NAV_AGENT_INSTRUCTIONS =
+    'Help investigate this Microsoft Dynamics NAV 2016 error.\n' +
+    '1. Explain what the error means and its most likely cause, using the message and the record data above.\n' +
+    '2. Search the knowledge base (documentation, Confluence pages and Jira issues) for similar errors and how they were solved; cite the issue keys and pages you use.\n' +
+    '3. Check the knowledge base thoroughly, including the C/AL application code it contains (tables, pages, codeunits, triggers, functions, events), and trace where this error is raised and why; base the answer on what you find there.\n' +
+    '4. Suggest how to confirm the cause and how to fix it (setup, data or code).\n' +
+    'If something is missing, say what to check in Dynamics NAV.';
+  const DEFAULT_ENVIRONMENTS = 'STG = STG\nQA = QA\nclient = PROD';
+  // Separate setup for Business Central and NAV 2016 (nav* keys); the
+  // screenshot option is shared, as is its permission
   const DEFAULT_ERROR_REPORT = {
     errorButtons: true,
     errorScreenshot: false,
-    environments: 'STG = STG\nQA = QA\nclient = PROD',
-    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS
+    environments: DEFAULT_ENVIRONMENTS,
+    agentInstructions: DEFAULT_AGENT_INSTRUCTIONS,
+    navErrorButtons: true,
+    navEnvironments: DEFAULT_ENVIRONMENTS,
+    navAgentInstructions: DEFAULT_NAV_AGENT_INSTRUCTIONS
   };
 
   let isEnabled = true;
@@ -649,6 +662,13 @@
     return title.replace(/^[^\s-]+ - /, '').trim();
   }
 
+  /** NAV page mode from the window title: Edit, View, New, Delete (localized) */
+  function extractNavPageMode(scope) {
+    const titleEl = scope.querySelector('.native-container-title');
+    const match = titleEl ? sanitizeText(titleEl.textContent).match(/^([^\s-]+) - /) : null;
+    return match ? match[1] : '';
+  }
+
   /** NAV record caption shown in the page header, e.g. "10000 ∙ Adatum Corporation" */
   function extractNavRecordCaption(scope) {
     const el = scope.querySelector('.pagetitle-control');
@@ -1166,10 +1186,31 @@
 
   function scanForErrors() {
     errorScanTimer = 0;
-    const active = isEnabled && errorReport.errorButtons !== false;
+    const nav = isNavClient();
+    const active = isEnabled && errorReport[nav ? 'navErrorButtons' : 'errorButtons'] !== false;
     if (pendingShot && !pendingShot.root.isConnected) pendingShot = null;
 
-    updateErrorPanel(active ? findErrorDialog() || findValidationError() : null);
+    updateErrorPanel(!active ? null : nav ? findNavError() : findErrorDialog() || findValidationError());
+  }
+
+  /**
+   * NAV 2016 shows errors in a message bar at the top of the page
+   * (.ms-nav-validationmessage). Next to a general "The page has an error"
+   * bar the actual message has role="alert" — that one is preferred. Only
+   * the top-most page counts; pages below keep their old bars.
+   */
+  function findNavError() {
+    const views = Array.from(document.querySelectorAll('.spa-view.shown'));
+    const scope = views[views.length - 1] || document;
+    const bars = Array.from(scope.querySelectorAll('.ms-nav-validationmessage'))
+      .filter((bar) => bar.getClientRects().length > 0 && !bar.closest('.ms-nav-hidden') &&
+                       bar.querySelector('.ms-nav-validationpanel-text'));
+    return bars.find((bar) => bar.getAttribute('role') === 'alert') || bars[bars.length - 1] || null;
+  }
+
+  /** "Dynamics NAV" or "Business Central" — panel title and report heading */
+  function systemShortName() {
+    return isNavClient() ? 'Dynamics NAV' : 'Business Central';
   }
 
   /** Top-most visible BC error dialog in this frame (a closed one may stay in the DOM) */
@@ -1217,7 +1258,7 @@
       const header = document.createElement('div');
       header.className = 'bc-sc-error-panel-header';
       const title = document.createElement('span');
-      title.textContent = 'Business Central error';
+      title.className = 'bc-sc-error-panel-title';
       const close = document.createElement('button');
       close.type = 'button';
       close.className = 'bc-sc-error-panel-close';
@@ -1236,6 +1277,10 @@
     }
 
     errorPanelRoot = root;
+    const titleEl = errorPanel.querySelector('.bc-sc-error-panel-title');
+    const titleText = `${systemShortName()} error`;
+    if (titleEl.textContent !== titleText) titleEl.textContent = titleText;
+
     const messageEl = errorPanel.querySelector('.bc-sc-error-panel-message');
     const text = info.message;
     if (messageEl.textContent !== text) messageEl.textContent = text;
@@ -1346,6 +1391,7 @@
       ...readPageContext(),
       page: pageName,
       record: readRecordCaption(view, pageName),
+      mode: isNavClient() && view !== document ? extractNavPageMode(view) : '',
       field: info.field,
       message: info.message,
       sections: readRecordSections(view, pageName),
@@ -1357,6 +1403,11 @@
 
   /** Error message (and the field name for validation errors) */
   function readErrorInfo(root) {
+    if (root.matches('.ms-nav-validationmessage')) {
+      const text = root.querySelector('.ms-nav-validationpanel-text');
+      return { field: '', message: sanitizeText(text ? text.textContent : '') };
+    }
+
     if (root.matches('form.error-dialog')) {
       const el = root.querySelector('.error-dialog-caption') ||
                  root.querySelector('.ms-nav-logical-dialog') ||
@@ -1413,7 +1464,8 @@
    */
   function readRecordSections(view, pageName) {
     const sections = [];
-    const skip = '.ms-nav-layout-factbox-pane-container, form.error-dialog, .bc-sc-error-ui';
+    // FactBoxes: BC pane container, NAV 2016 .ms-nav-cardfactbox
+    const skip = '.ms-nav-layout-factbox-pane-container, .ms-nav-cardfactbox, form.error-dialog, .bc-sc-error-ui';
 
     const fields = [];
     for (const container of view.querySelectorAll('.ms-nav-edit-control-container')) {
@@ -1493,6 +1545,7 @@
 
     const main = urls[0];
     return {
+      system: isNavClient() ? 'Microsoft Dynamics NAV 2016' : 'Microsoft Dynamics 365 Business Central',
       environment: detectEnvironment(main.host + main.pathname),
       host: main.host,
       company: param('company'),
@@ -1508,7 +1561,8 @@
    */
   function detectEnvironment(address) {
     const haystack = address.toLowerCase();
-    for (const line of String(errorReport.environments || '').split(/\r?\n/)) {
+    const rules = errorReport[isNavClient() ? 'navEnvironments' : 'environments'];
+    for (const line of String(rules || '').split(/\r?\n/)) {
       const rule = line.trim();
       if (!rule || rule.startsWith('#')) continue;
       const eq = rule.indexOf('=');
@@ -1583,12 +1637,13 @@
   // --- Report formats ---------------------------------------------------------
 
   function reportHeaderLines(report) {
-    const lines = [`Environment: ${report.environment || `unknown (${report.host})`}`];
+    const lines = [`System: ${report.system}`, `Environment: ${report.environment || `unknown (${report.host})`}`];
     if (report.company) lines.push(`Company: ${report.company}`);
     if (report.page || report.pageId) {
       lines.push(`Page: ${report.page || '?'}${report.pageId ? ` (page ${report.pageId})` : ''}`);
     }
     if (report.record) lines.push(`Record: ${report.record}`);
+    if (report.mode) lines.push(`Page mode: ${report.mode}`);
     if (report.field) lines.push(`Field: ${report.field}`);
     lines.push(`Time: ${report.time}`);
     lines.push(`URL: ${report.url}`);
@@ -1603,7 +1658,7 @@
   /** Markdown for an AI agent: context, data and what to do with it */
   function buildAgentText(report) {
     const cell = (value) => (value || '').replace(/\|/g, '\\|').replace(/\s*\n\s*/g, ' ');
-    const out = ['# Business Central error', '', ...reportHeaderLines(report), '',
+    const out = [`# ${report.system.replace(/^Microsoft (Dynamics 365 )?/, '')} error`, '', ...reportHeaderLines(report), '',
       '## Error message', '', report.message || '(no message)', ''];
 
     for (const section of report.sections) {
@@ -1618,7 +1673,9 @@
     }
 
     // Editable in the popup; an emptied field falls back to the default
-    const instructions = String(errorReport.agentInstructions || '').trim() || DEFAULT_AGENT_INSTRUCTIONS;
+    const nav = /NAV/.test(report.system);
+    const instructions = String(errorReport[nav ? 'navAgentInstructions' : 'agentInstructions'] || '').trim() ||
+                         (nav ? DEFAULT_NAV_AGENT_INSTRUCTIONS : DEFAULT_AGENT_INSTRUCTIONS);
     out.push('## Task', '', instructions);
     return out.join('\n');
   }
@@ -1628,12 +1685,13 @@
    * expected result, further steps) stay empty for the reporter.
    */
   function jiraBugFields(report) {
-    const preconditions = [];
+    const preconditions = [`System: ${report.system}`];
     if (report.company) preconditions.push(`Company: ${report.company}`);
     if (report.page || report.pageId) {
       preconditions.push(`Page: ${report.page || '?'}${report.pageId ? ` (page ${report.pageId})` : ''}`);
     }
     if (report.record) preconditions.push(`Record: ${report.record}`);
+    if (report.mode) preconditions.push(`Page mode: ${report.mode}`);
 
     const steps = [`Open ${report.page || 'the page'}${report.record ? ` for ${report.record}` : ''}`];
     if (report.field) steps.push(`Enter a value in the field ${report.field}`);

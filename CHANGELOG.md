@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.13.0] - 2026-11-23
+
+### Added
+- **Error reports in Dynamics NAV 2016**: NAV shows errors in a message bar at the top of the page (e.g. *You cannot delete Item 1000 because there is at least one outstanding Sales Order that includes this item.*). The error panel with *Copy for AI agent* / *Copy for Jira* appears for it too; the actual message (`role="alert"`) is preferred over the general *The page has an error* bar. The report holds the page, record, page mode (Edit, View, New, Delete) and all fields; NAV 2016 has no technical details (call stack) to add.
+- **Separate setup for Business Central and NAV 2016**: In the popup (*Error reports*) a switch selects the system; buttons on errors, environment rules and AI agent instructions are stored per system. The default NAV instructions refer to C/AL code. The screenshot option is shared.
+- Reports name the system (`System: Microsoft Dynamics NAV 2016` / `… Business Central`); the panel title says *Dynamics NAV error* or *Business Central error*.
+- NAV FactBoxes are skipped in the record data.
+- Test fixture: NAV 2016 *Item Card* with a delete error.
+
+---
+
 ## [1.12.0] - 2026-11-23
 
 ### Added

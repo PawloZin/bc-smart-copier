@@ -78,6 +78,8 @@ All three shortcuts can be changed in the extension popup (**Keyboard shortcuts*
 4. Releasing the key, moving off the table or switching windows removes the outline. Without the key held, the page works as usual.
 
 ### Error Reports — Copy for AI agent / Copy for Jira
+Works in Business Central (error dialogs, field validation errors) and in **Dynamics NAV 2016** (the error message bar at the top of the page). The popup has a separate setup for each system — buttons, environment rules and AI agent instructions; switch between *Business Central* and *Dynamics NAV 2016* above the fields.
+
 1. When BC shows an error dialog or a field validation error (red field), two buttons appear in a panel at the bottom center of the page.
 2. **Copy for AI agent** copies Markdown with the error and a short task for an agent that has your knowledge base (documentation, Jira issues, application code) — the task text is editable in the popup. **Copy for Jira** copies the same data as Jira markup / rich text in the bug template: *Short BUG description*, *Environment*, *Role/actor*, *Pre conditions*, *Steps to reproduce the BUG*, *Actual result*, *Expected results*, *Additional data* (fields the extension cannot know stay empty).
 3. The report contains:
